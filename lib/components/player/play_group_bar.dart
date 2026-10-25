@@ -139,7 +139,7 @@ class PlayGroupBar extends StatelessWidget {
 
   Widget _buildGroupChip(int index) {
     final active = currentGroup == index;
-    return InkWell(
+    final chip = InkWell(
       key: groupKeys?[index],
       onTap: () => onSelectGroup(index),
       borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -162,6 +162,28 @@ class PlayGroupBar extends StatelessWidget {
         ),
       ),
     );
+
+    // TvFocusItem：↑ 显式跳到播放器 HUD（返回 / 投屏 / 画中画 / 全屏）。
+    //
+    // 必须显式指定：分组 chip 在**横向 SingleChildScrollView** 里，
+    // Flutter 的 Scrollable 会先消费方向键做滚动 —— 焦点出不了这一行。
+    return TvFocusItem(
+      bridge: focusBridge,
+      zone: 'player_group',
+      index: index,
+      // ↑ 跳到侧栏右上角的「全屏」按钮。
+      //
+      // 为什么不是直接跳 HUD：分组 chip 在**横向 SingleChildScrollView** 里，
+      // Scrollable 会先消费 ↑ 做滚动 —— 焦点出不了这一行。
+      // 侧栏「全屏」按钮不在滚动容器里，焦点能稳稳停住并显示橙色焦点框。
+      // 再按一次 ↑ 才会从它跳到视频区顶部的 HUD。
+      upZone: 'player_fullscreen',
+      upIndex: 0,
+      focusRadius: BorderRadius.circular(AppTheme.radiusPill),
+      onTap: () => onSelectGroup(index),
+      child: chip,
+    );
+
   }
 
   @override

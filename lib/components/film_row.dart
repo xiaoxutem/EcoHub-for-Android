@@ -12,6 +12,12 @@ class FilmRow extends StatelessWidget {
   final String title;
   final List<MovieBasicInfo> films;
   final String moreText;
+
+  /// 是否显示行标题（如「电影片」「连续剧」）。
+  ///
+  /// 推荐页顶部已有分类标签行，区块标题重复且挤占空间 ——
+  /// 设为 false 可得到纯卡片流的极简首页。
+  final bool showTitle;
   final int pid;
   final VoidCallback? onMore;
   final double? leftInset;
@@ -37,6 +43,7 @@ class FilmRow extends StatelessWidget {
     required this.title,
     required this.films,
     this.moreText = '查看全部',
+    this.showTitle = true,
     this.pid = 0,
     this.onMore,
     this.leftInset,
@@ -100,7 +107,8 @@ class FilmRow extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Expanded(
+                if (showTitle)
+                  Expanded(
                   child: FocusTap(
                     onTap: () => _openMore(context),
                     focusRadius: BorderRadius.circular(AppTheme.radiusSm),
@@ -130,7 +138,9 @@ class FilmRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                ),
+                )
+                else
+                  const Spacer(),
                 FocusTap(
                   onTap: () => _openMore(context),
                   focusRadius: BorderRadius.circular(AppTheme.radiusPill),

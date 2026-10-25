@@ -191,8 +191,32 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     _lastControlsShown = shown;
     if (!justShown) return;
     if (widget.isFull) return; // 全屏下方向键用于音量 / 快进，焦点留在画面上
-    // 焦点已经在别处（比如用户正在操作侧栏）就不抢。
-    if (FocusManager.instance.primaryFocus != null) return;
+
+    // 焦点已经在**播放器之外**（比如用户正在操作侧栏）就不抢；
+    // 在播放器区域内（或者还没落点）才把焦点交给播放 / 暂停键。
+    //
+    // 注意：不能写成 `primaryFocus != null` —— 那个条件几乎恒为真
+    // （Flutter 总会给出一个 primary focus），会导致焦点永远送不出去。
+    final primary = FocusManager.instance.primaryFocus;
+    if (primary != null) {
+      // 焦点是否在播放器区域内（沿 Focus 祖先链找 HUD scope）。
+      var inHud = false;
+      FocusNode? node = primary;
+      while (node != null) {
+        if (identical(node, _hudFocusScope)) {
+          inHud = true;
+          break;
+        }
+        node = node.parent;
+      }
+      // 焦点在侧栏等**播放器之外**的区域就不抢。
+      if (!inHud) {
+        final inPlayer = primary.context != null &&
+            primary.context!
+                .findAncestorWidgetOfExactType<VideoPlayerWidget>() != null;
+        if (!inPlayer) return;
+      }
+    }
     focusPlayButton();
   }
 

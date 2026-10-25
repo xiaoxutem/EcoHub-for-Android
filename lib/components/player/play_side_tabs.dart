@@ -174,6 +174,9 @@ class PlaySideTabs extends StatelessWidget {
                 TvFocusItem(
                   zone: 'player_fullscreen',
                   index: 0,
+                  // ↑ 跳到视频区顶部的 HUD（返回 / 投屏 / 画中画 / 全屏）。
+                  upZone: 'player_hud',
+                  upIndex: 0,
                   focusRadius: BorderRadius.circular(AppTheme.radiusSm),
                   onTap: onRequestFullscreen,
                   child: Container(

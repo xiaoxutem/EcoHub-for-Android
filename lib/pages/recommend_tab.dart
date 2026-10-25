@@ -9,7 +9,6 @@ import '../components/loading_view.dart';
 import '../components/empty_state.dart';
 import '../components/film_row.dart';
 import '../utils/tv_focus_bridge.dart';
-import '../components/tv_focus_item.dart';
 import '../components/home_banner.dart';
 import '../components/focus_wrap.dart';
 import '../utils/favorite_manager.dart';
@@ -31,9 +30,6 @@ class RecommendTab extends StatefulWidget {
 
 class _RecommendTabState extends State<RecommendTab> {
   static const _verticalPhysics = AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics());
-  static const _iconSize = 17.0, _tagHeight = 32.0, _glyphSize = 10.0, _labelSize = 13.0;
-  static const _iconBg = Color(0x1FFA8C16), _iconBorder = Color(0x47FA8C16);
-  static const _chipBg = Color(0x0DFFFFFF), _chipBorder = Color(0x1AFFFFFF);
 
   List<BannerItem> _banners = [];
   List<HomeSection> _sections = [];
@@ -51,7 +47,6 @@ class _RecommendTabState extends State<RecommendTab> {
   final TvFocusBridge _focusBridge = TvFocusBridge();
 
   /// 区域名常量。
-  static const String _zoneCategory = 'category';
   static const String _zoneRow = 'row';
 
   @override
@@ -145,11 +140,6 @@ class _RecommendTabState extends State<RecommendTab> {
     }).toList();
   }
 
-  String _categoryGlyph(String name) {
-    final text = name.trim();
-    if (text.isEmpty) return '';
-    return String.fromCharCodes(text.runes.take(1));
-  }
 
   double _effectiveHeaderAlpha(bool wide) {
     if (_banners.isEmpty) return 1.0;
@@ -169,88 +159,6 @@ class _RecommendTabState extends State<RecommendTab> {
     Navigator.pushNamed(context, '/filter', arguments: {'Pid': '$pid'});
   }
 
-  Widget _categoryEntry(HomeSection section, bool wide, int index) {
-    final glyph = _categoryGlyph(section.nav.name);
-    return Padding(
-      padding: EdgeInsets.only(right: wide ? 8 : AppTheme.spaceSm),
-      // TvFocusItem：按 ↓ 跳到**对应的**电影行第一张卡，
-      // 按 ↑ 跳回分类标题行 —— 不再靠几何匹配猜。
-      child: TvFocusItem(
-        bridge: _focusBridge,
-        zone: _zoneCategory,
-        index: index,
-        downZone: _zoneRow,
-        downIndex: index,
-        // ↑ 不设跨区域目标：分类项上方是搜索框 / 轮播图，
-        // 交给 Flutter 默认的几何遍历更自然。
-        //
-        // （之前误设成 upZone: _zoneCategory —— 指回自己，
-        //  按 ↑ 会在分类项之间原地打转，表现就是「焦点乱跳」。）
-        focusRadius: BorderRadius.circular(AppTheme.radiusPill),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => _openFilter(section.nav.id),
-            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-            child: Container(
-              height: wide ? 35 : _tagHeight,
-              padding: EdgeInsets.only(
-                left: wide ? 8 : (AppTheme.spaceSm - 2),
-                right: wide ? 13 : (AppTheme.spaceMd - 1),
-              ),
-              decoration: BoxDecoration(
-                color: wide ? const Color(0x0FFFFFFF) : _chipBg,
-                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                border: Border.all(
-                  width: wide ? 0.8 : 0.8,
-                  color: wide ? const Color(0x1FFFFFFF) : _chipBorder,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (glyph.isNotEmpty) ...[
-                    Container(
-                      width: wide ? 19 : _iconSize,
-                      height: wide ? 19 : _iconSize,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: wide ? const Color(0x24FA8C16) : _iconBg,
-                        borderRadius: BorderRadius.circular(wide ? 9.5 : _iconSize / 2),
-                        border: Border.all(
-                          width: wide ? 0.7 : 0.6,
-                          color: wide ? const Color(0x52FA8C16) : _iconBorder,
-                        ),
-                      ),
-                      child: Text(
-                        glyph,
-                        style: TextStyle(
-                          fontFamily: AppTheme.calligraphyFont,
-                          fontSize: wide ? 11 : _glyphSize,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.accent,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: wide ? 6 : (AppTheme.spaceSm - 2)),
-                  ],
-                  Text(
-                    section.nav.name,
-                    style: TextStyle(
-                      fontSize: wide ? 13.5 : _labelSize,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _stateActions({required String label, required VoidCallback onTap}) {
     return Column(
@@ -362,21 +270,9 @@ class _RecommendTabState extends State<RecommendTab> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.subscriptions_rounded, size: 20, color: AppTheme.accent),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              widget.siteName,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-                shadows: [Shadow(blurRadius: 8, color: Color(0xD9000000), offset: Offset(0, 1))],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+          // 顶部只保留搜索入口 ——
+          // 站点名（EcoHub）与分类标签行已按需隐藏，顶栏留白更干净。
+          const Spacer(),
           FocusTap(
             focusRadius: BorderRadius.circular(AppTheme.radiusPill),
             onTap: _openSearch,
@@ -469,36 +365,6 @@ class _RecommendTabState extends State<RecommendTab> {
             SliverToBoxAdapter(
               child: HomeBanner(key: ValueKey(_reloadToken), banners: _banners),
             ),
-            if (sections.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: wide ? 14 : AppTheme.spaceLg),
-                  // FocusTraversalGroup：把「分类标题行」划为一个独立的遍历组。
-                  //
-                  // 为什么要分组：分类行是**横向**排列，下面的 FilmRow 也是横向排列，
-                  // 两者几何位置挨得很近。默认的焦点遍历按几何位置找最近候选，
-                  // 于是 ↓ 键会在「分类标题」和「电影卡片」之间反复横跳 ——
-                  // 表现为焦点框在两处之间乱窜。
-                  //
-                  // 分组后，↓ 键按**组的顺序**移动（分类行组 → 第 1 个 FilmRow 组
-                  // → 第 2 个 …），行为完全确定。
-                  child: FocusTraversalGroup(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: EdgeInsets.only(
-                        left: AppTheme.spaceLg + leftInset,
-                        right: AppTheme.spaceLg + rightInset,
-                      ),
-                      child: Row(
-                        children: [
-                          for (var i = 0; i < sections.length; i++)
-                            _categoryEntry(sections[i], wide, i),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             SliverList.builder(
               itemCount: sections.length,
               itemBuilder: (context, index) {
@@ -506,6 +372,9 @@ class _RecommendTabState extends State<RecommendTab> {
                 final movies = section.movies.isNotEmpty ? section.movies : section.hot;
                 return FilmRow(
                   title: section.nav.name,
+                  // 推荐页顶部已有分类标签行（已按需隐藏），
+                  // 区块标题重复且挤占空间 —— 纯卡片流更清爽。
+                  showTitle: false,
                   films: movies,
                   pid: section.nav.id,
                   leftInset: leftInset,
@@ -516,8 +385,9 @@ class _RecommendTabState extends State<RecommendTab> {
                   focusBridge: _focusBridge,
                   focusZone: _zoneRow,
                   focusIndex: index,
-                  focusUpZone: _zoneCategory,
-                  focusUpIndex: index,
+                  // 分类标签行已隐藏 → 第 0 行的 ↑ 交回默认几何遍历
+                  focusUpZone: null,
+                  focusUpIndex: 0,
                 );
               },
             ),
