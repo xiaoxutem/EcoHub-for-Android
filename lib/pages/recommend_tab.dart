@@ -9,6 +9,7 @@ import '../components/loading_view.dart';
 import '../components/empty_state.dart';
 import '../components/film_row.dart';
 import '../components/home_banner.dart';
+import '../components/focus_wrap.dart';
 import '../utils/favorite_manager.dart';
 
 /// 首页推荐 Tab，对齐 OHOS `RecommendTab.ets`
@@ -159,63 +160,66 @@ class _RecommendTabState extends State<RecommendTab> {
     final glyph = _categoryGlyph(section.nav.name);
     return Padding(
       padding: EdgeInsets.only(right: wide ? 8 : AppTheme.spaceSm),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _openFilter(section.nav.id),
-          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          child: Container(
-            height: wide ? 35 : _tagHeight,
-            padding: EdgeInsets.only(
-              left: wide ? 8 : (AppTheme.spaceSm - 2),
-              right: wide ? 13 : (AppTheme.spaceMd - 1),
-            ),
-            decoration: BoxDecoration(
-              color: wide ? const Color(0x0FFFFFFF) : _chipBg,
-              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-              border: Border.all(
-                width: wide ? 0.8 : 0.8,
-                color: wide ? const Color(0x1FFFFFFF) : _chipBorder,
+      child: FocusHighlight(
+        radius: BorderRadius.circular(AppTheme.radiusPill),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _openFilter(section.nav.id),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            child: Container(
+              height: wide ? 35 : _tagHeight,
+              padding: EdgeInsets.only(
+                left: wide ? 8 : (AppTheme.spaceSm - 2),
+                right: wide ? 13 : (AppTheme.spaceMd - 1),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (glyph.isNotEmpty) ...[
-                  Container(
-                    width: wide ? 19 : _iconSize,
-                    height: wide ? 19 : _iconSize,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: wide ? const Color(0x24FA8C16) : _iconBg,
-                      borderRadius: BorderRadius.circular(wide ? 9.5 : _iconSize / 2),
-                      border: Border.all(
-                        width: wide ? 0.7 : 0.6,
-                        color: wide ? const Color(0x52FA8C16) : _iconBorder,
-                      ),
-                    ),
-                    child: Text(
-                      glyph,
-                      style: TextStyle(
-                        fontFamily: AppTheme.calligraphyFont,
-                        fontSize: wide ? 11 : _glyphSize,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.accent,
-                        height: 1,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: wide ? 6 : (AppTheme.spaceSm - 2)),
-                ],
-                Text(
-                  section.nav.name,
-                  style: TextStyle(
-                    fontSize: wide ? 13.5 : _labelSize,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textPrimary,
-                  ),
+              decoration: BoxDecoration(
+                color: wide ? const Color(0x0FFFFFFF) : _chipBg,
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                border: Border.all(
+                  width: wide ? 0.8 : 0.8,
+                  color: wide ? const Color(0x1FFFFFFF) : _chipBorder,
                 ),
-              ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (glyph.isNotEmpty) ...[
+                    Container(
+                      width: wide ? 19 : _iconSize,
+                      height: wide ? 19 : _iconSize,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: wide ? const Color(0x24FA8C16) : _iconBg,
+                        borderRadius: BorderRadius.circular(wide ? 9.5 : _iconSize / 2),
+                        border: Border.all(
+                          width: wide ? 0.7 : 0.6,
+                          color: wide ? const Color(0x52FA8C16) : _iconBorder,
+                        ),
+                      ),
+                      child: Text(
+                        glyph,
+                        style: TextStyle(
+                          fontFamily: AppTheme.calligraphyFont,
+                          fontSize: wide ? 11 : _glyphSize,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.accent,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: wide ? 6 : (AppTheme.spaceSm - 2)),
+                  ],
+                  Text(
+                    section.nav.name,
+                    style: TextStyle(
+                      fontSize: wide ? 13.5 : _labelSize,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -240,23 +244,26 @@ class _RecommendTabState extends State<RecommendTab> {
     required bool accent,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: accent ? AppTheme.accent : AppTheme.bgCard,
-      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-      child: InkWell(
-        onTap: onTap,
+    return FocusHighlight(
+      radius: BorderRadius.circular(AppTheme.radiusPill),
+      child: Material(
+        color: accent ? AppTheme.accent : AppTheme.bgCard,
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        child: Container(
-          width: 148,
-          height: 38,
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 15, color: AppTheme.textPrimary),
-              const SizedBox(width: 6),
-              Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-            ],
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          child: Container(
+            width: 148,
+            height: 38,
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 15, color: AppTheme.textPrimary),
+                const SizedBox(width: 6),
+                Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+              ],
+            ),
           ),
         ),
       ),
@@ -345,7 +352,8 @@ class _RecommendTabState extends State<RecommendTab> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          GestureDetector(
+          FocusTap(
+            focusRadius: BorderRadius.circular(AppTheme.radiusPill),
             onTap: _openSearch,
             child: Container(
               height: 34,

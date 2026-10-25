@@ -10,6 +10,7 @@ import '../components/search_source_tabs.dart';
 import '../components/search_suggest_pane.dart';
 import '../components/search_result_list.dart';
 import '../components/loading_view.dart';
+import '../components/focus_wrap.dart';
 
 const List<String> _defaultHotKeywords = [
   '凡人修仙传', '庆余年', '仙逆', '吞噬星空', '遮天', '斗破苍穹', '白夜破晓', '大奉打更人'
@@ -356,7 +357,8 @@ class _SearchPageState extends State<SearchPage> {
                             ),
                           ),
                           if (_inputController.text.isNotEmpty)
-                            GestureDetector(
+                            FocusTap(
+                              focusRadius: BorderRadius.circular(16),
                               onTap: () {
                                 _focusNode.unfocus();
                                 setState(() {
@@ -372,17 +374,20 @@ class _SearchPageState extends State<SearchPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  InkWell(
-                    onTap: () => _doSearch(true),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.accent,
-                        shape: BoxShape.circle,
+                  FocusHighlight(
+                    radius: BorderRadius.circular(20),
+                    child: InkWell(
+                      onTap: () => _doSearch(true),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: AppTheme.accent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.search_rounded, size: 20, color: Colors.white),
                       ),
-                      child: const Icon(Icons.search_rounded, size: 20, color: Colors.white),
                     ),
                   ),
                   const SizedBox(width: 4),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../common/app_theme.dart';
+import 'focus_wrap.dart';
 
 class SearchSuggestPane extends StatelessWidget {
   final List<String> searchHistory;
@@ -38,7 +39,8 @@ class SearchSuggestPane extends StatelessWidget {
                       '搜索历史',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                     ),
-                    GestureDetector(
+                    FocusTap(
+                      focusRadius: BorderRadius.circular(AppTheme.radiusSm),
                       onTap: onClearHistory,
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
@@ -64,23 +66,29 @@ class SearchSuggestPane extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          InkWell(
-                            onTap: () => onSelectKeyword(item),
-                            borderRadius: const BorderRadius.horizontal(left: Radius.circular(AppTheme.radiusPill)),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: maxHistoryTextWidth),
-                                child: Text(
-                                  item,
-                                  style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                          FocusHighlight(
+                            radius: const BorderRadius.horizontal(
+                              left: Radius.circular(AppTheme.radiusPill),
+                            ),
+                            child: InkWell(
+                              onTap: () => onSelectKeyword(item),
+                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(AppTheme.radiusPill)),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(maxWidth: maxHistoryTextWidth),
+                                  child: Text(
+                                    item,
+                                    style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                          GestureDetector(
+                          FocusTap(
+                            focusRadius: const BorderRadius.all(Radius.circular(16)),
                             onTap: () => onRemoveHistory(item),
                             child: const Padding(
                               padding: EdgeInsets.only(right: 8, left: 2),
@@ -112,40 +120,43 @@ class SearchSuggestPane extends StatelessWidget {
                   children: List.generate(hotKeywords.length, (index) {
                     final item = hotKeywords[index];
                     final isTop3 = index < 3;
-                    return InkWell(
-                      onTap: () => onSelectKeyword(item),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: isTop3 ? AppTheme.bgChip : AppTheme.bgCard,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                          border: Border.all(
-                            color: isTop3 ? AppTheme.accentSoft : AppTheme.border,
+                    return FocusHighlight(
+                      radius: BorderRadius.circular(AppTheme.radiusPill),
+                      child: InkWell(
+                        onTap: () => onSelectKeyword(item),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: isTop3 ? AppTheme.bgChip : AppTheme.bgCard,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                            border: Border.all(
+                              color: isTop3 ? AppTheme.accentSoft : AppTheme.border,
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${index + 1}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isTop3 ? AppTheme.accent : AppTheme.textMuted,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isTop3 ? AppTheme.accent : AppTheme.textMuted,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            ConstrainedBox(
-                              constraints: BoxConstraints(maxWidth: maxHotTextWidth),
-                              child: Text(
-                                item,
-                                style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              const SizedBox(width: 6),
+                              ConstrainedBox(
+                                constraints: BoxConstraints(maxWidth: maxHotTextWidth),
+                                child: Text(
+                                  item,
+                                  style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     );

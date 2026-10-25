@@ -8,6 +8,7 @@ import '../api/http_client.dart';
 import '../api/film_api.dart';
 import '../components/app_icon.dart';
 import '../components/server_history_dialog.dart';
+import '../components/focus_wrap.dart';
 import 'main_scaffold_page.dart';
 
 /// 软件源配置页，对齐 OHOS `ServerConfigPage`
@@ -165,7 +166,8 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
               style: TextStyle(fontSize: landscape ? 12 : 13, color: AppTheme.textSecondary),
             ),
             if (_serverHistory.isNotEmpty)
-              GestureDetector(
+              FocusTap(
+                focusRadius: BorderRadius.circular(AppTheme.radiusSm),
                 onTap: _showHistoryDialog,
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: landscape ? 6 : 8, vertical: landscape ? 3 : 4),
@@ -215,7 +217,8 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
                 ),
               ),
               if (_controller.text.isNotEmpty)
-                GestureDetector(
+                FocusTap(
+                  focusRadius: BorderRadius.circular(16),
                   onTap: () => setState(() => _controller.clear()),
                   child: SizedBox(
                     width: landscape ? 32 : 36,

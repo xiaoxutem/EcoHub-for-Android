@@ -6,6 +6,7 @@ import '../models/film_models.dart';
 import '../utils/breakpoint.dart';
 import '../utils/format_util.dart';
 import '../utils/server_config_manager.dart';
+import 'focus_wrap.dart';
 
 /// 首页 Banner，对齐 OHOS `HomeBanner.ets`
 class HomeBanner extends StatefulWidget {
@@ -143,7 +144,8 @@ class _HomeBannerState extends State<HomeBanner> {
   }
 
   Widget _mobileItem(BannerItem item) {
-    return GestureDetector(
+    return FocusTap(
+      focusRadius: BorderRadius.circular(_multi ? AppTheme.radiusLg : 0),
       onTap: () => _openPlay(item),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -231,7 +233,8 @@ class _HomeBannerState extends State<HomeBanner> {
 
   Widget _wideItem(BannerItem item, double windowHeight) {
     final compact = windowHeight < 500;
-    return GestureDetector(
+    return FocusTap(
+      focusRadius: BorderRadius.circular(_multi ? AppTheme.radiusLg : 0),
       onTap: () => _openPlay(item),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -389,21 +392,24 @@ class _HomeBannerState extends State<HomeBanner> {
       ),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _openPlay(item),
-          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: compact ? 22 : 24, vertical: compact ? 8 : 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.play_arrow_rounded, size: compact ? 13 : 14, color: Colors.white),
-                const SizedBox(width: 6),
-                Text(
-                  '立即播放',
-                  style: TextStyle(fontSize: compact ? 12 : 13, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ],
+        child: FocusHighlight(
+          radius: BorderRadius.circular(AppTheme.radiusPill),
+          child: InkWell(
+            onTap: () => _openPlay(item),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: compact ? 22 : 24, vertical: compact ? 8 : 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.play_arrow_rounded, size: compact ? 13 : 14, color: Colors.white),
+                  const SizedBox(width: 6),
+                  Text(
+                    '立即播放',
+                    style: TextStyle(fontSize: compact ? 12 : 13, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

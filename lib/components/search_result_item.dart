@@ -6,6 +6,7 @@ import '../utils/format_util.dart';
 import '../utils/nav_util.dart';
 import '../utils/server_config_manager.dart';
 import '../utils/favorite_manager.dart';
+import 'focus_wrap.dart';
 
 /// 搜索结果横向图文卡片组件
 class SearchResultItem extends StatelessWidget {
@@ -73,7 +74,7 @@ class SearchResultItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final posterUrl = _resolvedPosterUrl();
 
-    return InkWell(
+    final item = InkWell(
       onTap: () => _handleClick(context),
       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: Padding(
@@ -194,6 +195,11 @@ class SearchResultItem extends StatelessWidget {
           ],
         ),
       ),
+    );
+
+    return FocusHighlight(
+      radius: BorderRadius.circular(AppTheme.radiusMd),
+      child: item,
     );
   }
 

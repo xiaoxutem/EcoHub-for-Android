@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/format_util.dart';
+import '../focus_wrap.dart';
 import 'player_speed.dart';
 
 enum PlayerTipKind { none, seekFwd, seekBack, brightness, volume, speed, scale }
@@ -169,7 +170,6 @@ class _PlayerGestureHandlerState extends State<PlayerGestureHandler> {
       builder: (context, constraints) {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: widget.onSingleTap,
           onDoubleTap: widget.onDoubleTap,
           onLongPressStart: _onLongPressStart,
           onLongPressEnd: _onLongPressEnd,
@@ -178,7 +178,14 @@ class _PlayerGestureHandlerState extends State<PlayerGestureHandler> {
           onPanEnd: _onPanEnd,
           onPanCancel: () => _onPanEnd(DragEndDetails()),
           child: SizedBox.expand(
-            child: widget.child,
+            // 单击单独拆成 FocusTap：TV 端遥控器 OK 键需要能触发 HUD 显隐，
+            // 而双击/长按/拖动等手势仍由外层手势层处理，两者互不影响。
+            child: FocusTap(
+              behavior: HitTestBehavior.opaque,
+              focusScaleEnabled: false,
+              onTap: widget.onSingleTap,
+              child: widget.child,
+            ),
           ),
         );
       },

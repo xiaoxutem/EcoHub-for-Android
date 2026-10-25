@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../utils/format_util.dart';
+import '../focus_wrap.dart';
 
 /// 画中画激活时主页面占位 HUD，对齐 OHOS `PlayerPipHud.ets`
 class PlayerPipHud extends StatelessWidget {
@@ -27,7 +28,7 @@ class PlayerPipHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return FocusTap(
       onTap: onRestore,
       behavior: HitTestBehavior.opaque,
       child: Stack(
@@ -99,8 +100,9 @@ class PlayerPipHud extends StatelessWidget {
             Positioned(
               left: _edge(6, leftInset),
               top: _edge(6, topInset),
-              child: GestureDetector(
+              child: FocusTap(
                 behavior: HitTestBehavior.opaque,
+                focusRadius: BorderRadius.circular(18),
                 onTap: onBack,
                 child: Container(
                   width: 36,

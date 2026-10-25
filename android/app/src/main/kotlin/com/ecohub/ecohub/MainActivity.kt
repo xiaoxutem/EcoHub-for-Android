@@ -26,6 +26,7 @@ class MainActivity : FlutterActivity() {
     private val PIP_CHANNEL = "com.ecohub.ecohub/pip"
     private val SETTINGS_CHANNEL = "com.ecohub.ecohub/settings"
     private val MULTICAST_CHANNEL = "com.ecohub.ecohub/multicast"
+    private val DEVICE_CHANNEL = "com.ecohub.ecohub/device"
     private val ACTION_PIP_CONTROL = "com.ecohub.ecohub.PIP_CONTROL"
     private val EXTRA_CONTROL_TYPE = "control_type"
 
@@ -251,6 +252,32 @@ class MainActivity : FlutterActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+
+        // 设备形态探测：供 Dart 侧判断是否运行在 Android TV（遥控器导航模式）
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isTvDevice" -> result.success(isTvDevice())
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    /**
+     * 判定当前设备是否为 Android TV。
+     *
+     * 两条判据取或：
+     * 1. `PackageManager.FEATURE_LEANBACK` —— 系统声明为电视形态；
+     * 2. `Configuration.uiMode == UI_MODE_TYPE_TELEVISION` —— 当前 UI 模式为电视。
+     */
+    private fun isTvDevice(): Boolean {
+        return try {
+            val hasLeanback = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+            val uiMode = resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK
+            val tvUiMode = uiMode == Configuration.UI_MODE_TYPE_TELEVISION
+            hasLeanback || tvUiMode
+        } catch (e: Exception) {
+            false
         }
     }
 

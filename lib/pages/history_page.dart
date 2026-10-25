@@ -9,6 +9,7 @@ import '../utils/source_guard.dart';
 import '../utils/nav_util.dart';
 import '../components/page_header.dart';
 import '../components/empty_state.dart';
+import '../components/focus_wrap.dart';
 
 /// 观看历史页面
 class HistoryPage extends StatefulWidget {
@@ -158,7 +159,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // Poster
-                                    GestureDetector(
+                                    FocusTap(
+                                      focusRadius: BorderRadius.circular(AppTheme.radiusMd),
                                       onTap: () => _openPlay(item),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -186,7 +188,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            GestureDetector(
+                                            FocusTap(
+                                              focusRadius: BorderRadius.circular(AppTheme.radiusSm),
                                               onTap: () => _openPlay(item),
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,7 +237,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
                                                 Expanded(
-                                                  child: GestureDetector(
+                                                  child: FocusTap(
+                                                    focusRadius: BorderRadius.circular(AppTheme.radiusSm),
                                                     onTap: () => _openPlay(item),
                                                     child: Text(
                                                       FormatUtil.progress(item.currentTime, item.duration),
@@ -248,25 +252,28 @@ class _HistoryPageState extends State<HistoryPage> {
                                                     ),
                                                   ),
                                                 ),
-                                                InkWell(
-                                                  onTap: () => _confirmDelete(item),
-                                                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                                                  child: Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                    decoration: BoxDecoration(
-                                                      color: AppTheme.dangerSoft,
-                                                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                                                    ),
-                                                    child: const Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Icon(Icons.delete_outline_rounded, size: 12, color: AppTheme.danger),
-                                                        SizedBox(width: 2),
-                                                        Text(
-                                                          '删除',
-                                                          style: TextStyle(fontSize: 11, color: AppTheme.danger),
-                                                        ),
-                                                      ],
+                                                FocusHighlight(
+                                                  radius: BorderRadius.circular(AppTheme.radiusSm),
+                                                  child: InkWell(
+                                                    onTap: () => _confirmDelete(item),
+                                                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                      decoration: BoxDecoration(
+                                                        color: AppTheme.dangerSoft,
+                                                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                                                      ),
+                                                      child: const Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Icon(Icons.delete_outline_rounded, size: 12, color: AppTheme.danger),
+                                                          SizedBox(width: 2),
+                                                          Text(
+                                                            '删除',
+                                                            style: TextStyle(fontSize: 11, color: AppTheme.danger),
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
                                                   ),
                                                 ),

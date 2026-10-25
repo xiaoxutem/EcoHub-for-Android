@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../common/app_theme.dart';
+import 'focus_wrap.dart';
 
 /// 筛选标签行，对齐 OHOS `FilterTagRow.ets`；横向滚动对齐 EcoTV FilterBar。
 class FilterTagRow extends StatefulWidget {
@@ -125,8 +126,9 @@ class _FilterTagRowState extends State<FilterTagRow> {
     final name = widget.names[index];
     final val = index < widget.values.length ? widget.values[index] : name;
     final active = _isSelected(val);
-    return GestureDetector(
+    return FocusTap(
       key: _chipKeys[index],
+      focusRadius: BorderRadius.circular(AppTheme.radiusPill),
       onTap: () => widget.onPick(widget.filterKey, val),
       child: Container(
         height: 32,

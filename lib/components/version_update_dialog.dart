@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../common/app_theme.dart';
 import '../utils/app_version_util.dart';
 import 'app_markdown_view.dart';
+import 'focus_wrap.dart';
 
 /// 版本更新弹窗组件
 class VersionUpdateDialog extends StatefulWidget {
@@ -79,7 +80,7 @@ class _VersionUpdateDialogState extends State<VersionUpdateDialog> with SingleTi
           children: [
           // 0.72 黑色遮罩
           Positioned.fill(
-            child: GestureDetector(
+            child: FocusTap(
               onTap: _handleClose,
               child: AnimatedBuilder(
                 animation: _opacityAnimation,

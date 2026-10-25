@@ -6,6 +6,7 @@ import 'player_scale.dart';
 import 'player_pip_coordinator.dart';
 import 'player_video_surface.dart';
 import 'player_playback_controller.dart';
+import 'player_dpad_controller.dart';
 import '../cast/player_cast_controller.dart';
 import '../cast/player_cast_hud.dart';
 import '../../types/dlna_types.dart';
@@ -306,22 +307,34 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
           child: Stack(
             fit: StackFit.expand,
             children: [
-              PlayerGestureHandler(
-                currentPosition: _playback.currentPosition,
-                totalDuration: _playback.totalDuration,
-                isPlaying: _playback.isPlaying,
+              // TV 遥控器 D-pad 控制层：方向键接管进度/音量，OK 键播放暂停。
+              // 非 TV 平台直接透传，行为与原来完全一致。
+              PlayerDpadController(
                 isFull: widget.isFull,
-                currentSpeed: _playback.currentSpeed,
-                currentBrightness: _playback.brightness,
+                isPlaying: _castCtrl.isCasting
+                    ? (_castCtrl.session.phase == CastPhase.playing)
+                    : _playback.isPlaying,
+                muted: _playback.muted,
+                currentPosition: Duration(seconds: currentPosition.toInt()),
+                totalDuration: Duration(seconds: totalDuration.toInt()),
                 currentVolume: _playback.volume,
-                onSingleTap: _playback.toggleHud,
-                onDoubleTap: () {
-                  if (!_castCtrl.isCasting) _playback.togglePlay();
+                onTogglePlay: () {
+                  if (!_castCtrl.isCasting) {
+                    if (_playback.controller == null && _playback.isCompleted) {
+                      _playback.initPlayer(widget.videoUrl, initialTime: 0, autoPlay: true);
+                    } else {
+                      _playback.togglePlay();
+                    }
+                  }
                 },
-                onSeekProgress: _playback.setDragPreview,
-                onSeekEnd: _playback.seekTo,
-                onSpeedChange: _playback.setSpeed,
-                onBrightnessChange: _playback.setBrightness,
+                onBack: () {
+                  if (widget.isFull) {
+                    _toggleFullscreen();
+                  } else {
+                    widget.onBack?.call();
+                  }
+                },
+                onSeekTo: _playback.seekTo,
                 onVolumeChange: (v) {
                   _playback.setVolume(v);
                   if (_castCtrl.isCasting) {
@@ -329,12 +342,42 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
                   }
                 },
                 onPanStateChange: _playback.setPanState,
-                child: PlayerVideoSurface(
-                  controller: _playback.controller,
-                  scaleMode: _playback.scaleMode,
-                  poster: widget.poster,
-                  isOpening: _playback.isOpening,
-                  isReady: _playback.isReady,
+                onToggleMute: () {
+                  _playback.toggleMute();
+                  if (_castCtrl.isCasting) {
+                    _castCtrl.pushCastVolume(_playback.muted ? 0.0 : _playback.volume);
+                  }
+                },
+                child: PlayerGestureHandler(
+                  currentPosition: _playback.currentPosition,
+                  totalDuration: _playback.totalDuration,
+                  isPlaying: _playback.isPlaying,
+                  isFull: widget.isFull,
+                  currentSpeed: _playback.currentSpeed,
+                  currentBrightness: _playback.brightness,
+                  currentVolume: _playback.volume,
+                  onSingleTap: _playback.toggleHud,
+                  onDoubleTap: () {
+                    if (!_castCtrl.isCasting) _playback.togglePlay();
+                  },
+                  onSeekProgress: _playback.setDragPreview,
+                  onSeekEnd: _playback.seekTo,
+                  onSpeedChange: _playback.setSpeed,
+                  onBrightnessChange: _playback.setBrightness,
+                  onVolumeChange: (v) {
+                    _playback.setVolume(v);
+                    if (_castCtrl.isCasting) {
+                      _castCtrl.pushCastVolume(v);
+                    }
+                  },
+                  onPanStateChange: _playback.setPanState,
+                  child: PlayerVideoSurface(
+                    controller: _playback.controller,
+                    scaleMode: _playback.scaleMode,
+                    poster: widget.poster,
+                    isOpening: _playback.isOpening,
+                    isReady: _playback.isReady,
+                  ),
                 ),
               ),
               if (_castCtrl.deviceName.isNotEmpty && !widget.isFull)

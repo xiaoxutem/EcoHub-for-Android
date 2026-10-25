@@ -6,6 +6,7 @@ import '../utils/format_util.dart';
 import '../utils/nav_util.dart';
 import '../utils/server_config_manager.dart';
 import '../utils/favorite_manager.dart';
+import 'focus_wrap.dart';
 
 /// 影片海报卡片组件
 class FilmCard extends StatelessWidget {
@@ -97,7 +98,8 @@ class FilmCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final posterUrl = _resolvedPosterUrl();
 
-    return InkWell(
+    // TV：InkWell 自身可聚焦，但需要明显的焦点高亮框，遥控器下才看得出选中项
+    final card = InkWell(
       onTap: () => _handleClick(context),
       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: LayoutBuilder(
@@ -217,6 +219,11 @@ class FilmCard extends StatelessWidget {
           return cardWidth != null ? SizedBox(width: cardWidth, child: card) : card;
         },
       ),
+    );
+
+    return FocusHighlight(
+      radius: BorderRadius.circular(AppTheme.radiusMd),
+      child: card,
     );
   }
 

@@ -3,6 +3,7 @@ import '../common/app_theme.dart';
 import '../models/film_models.dart';
 import '../utils/breakpoint.dart';
 import 'film_card.dart';
+import 'focus_wrap.dart';
 
 /// 首页分类横向影片展示行
 class FilmRow extends StatelessWidget {
@@ -73,8 +74,9 @@ class FilmRow extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: GestureDetector(
+                  child: FocusTap(
                     onTap: () => _openMore(context),
+                    focusRadius: BorderRadius.circular(AppTheme.radiusSm),
                     child: Row(
                       children: [
                         Container(
@@ -102,8 +104,9 @@ class FilmRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                GestureDetector(
+                FocusTap(
                   onTap: () => _openMore(context),
+                  focusRadius: BorderRadius.circular(AppTheme.radiusPill),
                   child: Padding(
                     padding: const EdgeInsets.only(left: AppTheme.spaceSm),
                     child: SizedBox(

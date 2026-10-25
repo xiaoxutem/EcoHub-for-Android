@@ -6,10 +6,12 @@ import '../utils/server_config_manager.dart';
 import '../utils/site_heartbeat.dart';
 import '../utils/source_guard.dart';
 import '../utils/app_version_util.dart';
+import '../utils/tv_mode.dart';
 import '../api/http_client.dart';
 import '../components/notice_dialog.dart';
 import '../components/version_update_dialog.dart';
 import '../components/loading_view.dart';
+import '../components/tv_side_nav.dart';
 import 'recommend_tab.dart';
 import 'daily_updates_tab.dart';
 import 'profile_tab.dart';
@@ -203,33 +205,49 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
     final showUpdateOverlay = _showUpdateDialog && AppVersionUtil.getCachedUpdateInfo() != null;
     final hasModalOverlay = showNoticeOverlay || showUpdateOverlay;
 
+    // TV 端使用左侧竖排导航（Android TV 标准布局）；其余平台沿用底部导航
+    final isTv = TvMode.isTv;
+
+    final contentBody = !_ready
+        ? const LoadingView(label: '正在接入服务')
+        : !_siteOpen
+            ? _buildMaintenanceView()
+            : IndexedStack(
+                index: _currentTabIndex,
+                children: [
+                  if (_tabReady[0])
+                    RecommendTab(
+                      siteName: _siteName,
+                      onOpenSearch: () => Navigator.pushNamed(context, '/search'),
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  if (_tabReady[1])
+                    const DailyUpdatesTab()
+                  else
+                    const SizedBox.shrink(),
+                  if (_tabReady[2])
+                    const ProfileTab()
+                  else
+                    const SizedBox.shrink(),
+                ],
+              );
+
     final scaffold = Scaffold(
       backgroundColor: AppTheme.bg,
-      body: !_ready
-          ? const LoadingView(label: '正在接入服务')
-          : !_siteOpen
-              ? _buildMaintenanceView()
-              : IndexedStack(
-                  index: _currentTabIndex,
-                  children: [
-                    if (_tabReady[0])
-                      RecommendTab(
-                        siteName: _siteName,
-                        onOpenSearch: () => Navigator.pushNamed(context, '/search'),
-                      )
-                    else
-                      const SizedBox.shrink(),
-                    if (_tabReady[1])
-                      const DailyUpdatesTab()
-                    else
-                      const SizedBox.shrink(),
-                    if (_tabReady[2])
-                      const ProfileTab()
-                    else
-                      const SizedBox.shrink(),
-                  ],
+      body: isTv && _ready && _siteOpen
+          ? Row(
+              children: [
+                TvSideNav(
+                  currentIndex: _currentTabIndex,
+                  onSelect: _selectTab,
+                  hasAppUpdate: _hasAppUpdate,
                 ),
-      bottomNavigationBar: _ready && _siteOpen
+                Expanded(child: contentBody),
+              ],
+            )
+          : contentBody,
+      bottomNavigationBar: !isTv && _ready && _siteOpen
           ? Container(
               decoration: const BoxDecoration(
                 color: AppTheme.bgElevated,

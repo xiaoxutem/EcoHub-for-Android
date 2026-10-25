@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../common/app_theme.dart';
 import '../utils/server_config_manager.dart';
+import 'focus_wrap.dart';
 
 /// 历史软件源居中弹层，对齐 OHOS `ServerConfigPage` 历史 Dialog
 Future<void> showServerHistoryDialog({
@@ -102,7 +103,8 @@ Widget _header(BuildContext ctx, bool canClear, VoidCallback onClear) {
           ),
         ),
         if (canClear)
-          GestureDetector(
+          FocusTap(
+            focusRadius: BorderRadius.circular(AppTheme.radiusSm),
             onTap: onClear,
             child: Container(
               margin: const EdgeInsets.only(right: 12),
@@ -120,7 +122,8 @@ Widget _header(BuildContext ctx, bool canClear, VoidCallback onClear) {
               ),
             ),
           ),
-        GestureDetector(
+        FocusTap(
+          focusRadius: BorderRadius.circular(14),
           onTap: () => Navigator.pop(ctx),
           child: const SizedBox(
             width: 28,
@@ -143,7 +146,8 @@ Widget _tile(String item, bool isCurrent, VoidCallback onSelect, VoidCallback on
     child: Row(
       children: [
         Expanded(
-          child: GestureDetector(
+          child: FocusTap(
+            focusRadius: BorderRadius.circular(AppTheme.radiusSm),
             onTap: onSelect,
             child: Row(
               children: [
@@ -175,7 +179,8 @@ Widget _tile(String item, bool isCurrent, VoidCallback onSelect, VoidCallback on
             ),
           ),
         ),
-        GestureDetector(
+        FocusTap(
+          focusRadius: BorderRadius.circular(AppTheme.radiusSm),
           onTap: onDelete,
           child: const SizedBox(
             width: 32,

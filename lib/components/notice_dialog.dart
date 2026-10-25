@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../common/app_theme.dart';
 import 'app_markdown_view.dart';
+import 'focus_wrap.dart';
 
 /// 站点公告弹性弹窗
 class NoticeDialog extends StatefulWidget {
@@ -64,7 +65,7 @@ class _NoticeDialogState extends State<NoticeDialog> with SingleTickerProviderSt
           children: [
           // 0.72 黑色遮罩
           Positioned.fill(
-            child: GestureDetector(
+            child: FocusTap(
               onTap: _handleClose,
               child: AnimatedBuilder(
                 animation: _opacityAnimation,

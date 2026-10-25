@@ -4,6 +4,7 @@ import 'player_gesture_handler.dart';
 import 'player_error_pad.dart';
 import 'player_bars.dart';
 import 'player_loading_card.dart';
+import '../focus_wrap.dart';
 
 /// 播放器覆盖层控制栏组件（全量对齐鸿蒙端 PlayerSkin）
 class PlayerSkinView extends StatelessWidget {
@@ -181,7 +182,8 @@ class PlayerSkinView extends StatelessWidget {
                   _buildCircleBtn(label: '-10', onTap: onSeekBack10),
                   const SizedBox(width: 28),
                 ],
-                GestureDetector(
+                FocusTap(
+                  focusRadius: BorderRadius.circular(29),
                   onTap: onTogglePlay,
                   child: Container(
                     width: 58,
@@ -210,7 +212,8 @@ class PlayerSkinView extends StatelessWidget {
   }
 
   Widget _buildCircleBtn({required String label, required VoidCallback onTap}) {
-    return GestureDetector(
+    return FocusTap(
+      focusRadius: BorderRadius.circular(22),
       onTap: onTap,
       child: Container(
         width: 44,
@@ -230,8 +233,9 @@ class PlayerSkinView extends StatelessWidget {
   }
 
   Widget _buildRoundBtn({required IconData icon, Color color = Colors.white, VoidCallback? onTap}) {
-    return GestureDetector(
+    return FocusTap(
       behavior: HitTestBehavior.opaque,
+      focusRadius: BorderRadius.circular(18),
       onTap: onTap,
       child: Container(
         width: 36,

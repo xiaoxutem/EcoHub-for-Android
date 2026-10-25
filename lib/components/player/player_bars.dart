@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../common/app_theme.dart';
 import '../../utils/format_util.dart';
+import '../focus_wrap.dart';
 
 /// 播放器顶部控制栏（全屏模式），对齐 OHOS `PlayerSkin.topBar`
 class PlayerTopBar extends StatelessWidget {
@@ -253,30 +254,36 @@ class _PlayerBottomBarState extends State<PlayerBottomBar> {
                 ),
                 Text(timeStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
                 const Spacer(),
-                InkWell(
-                  onTap: widget.onSpeed,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    ),
-                    child: Text('${widget.currentSpeed}x', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                if (widget.onScale != null)
-                  InkWell(
-                    onTap: widget.onScale,
+                FocusHighlight(
+                  radius: BorderRadius.circular(AppTheme.radiusPill),
+                  child: InkWell(
+                    onTap: widget.onSpeed,
                     borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     child: Container(
-                      margin: const EdgeInsets.only(left: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                       ),
-                      child: Text(widget.scaleLabel, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      child: Text('${widget.currentSpeed}x', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ),
+                if (widget.onScale != null)
+                  FocusHighlight(
+                    radius: BorderRadius.circular(AppTheme.radiusPill),
+                    child: InkWell(
+                      onTap: widget.onScale,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                      child: Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        ),
+                        child: Text(widget.scaleLabel, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
                     ),
                   ),
                 IconButton(
@@ -326,13 +333,16 @@ class _PlayerBottomBarState extends State<PlayerBottomBar> {
             style: const TextStyle(color: Colors.white70, fontSize: 10),
           ),
           const SizedBox(width: 4),
-          InkWell(
-            onTap: widget.onSpeed,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-              child: Text(
-                '${widget.currentSpeed}x',
-                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+          FocusHighlight(
+            radius: BorderRadius.circular(AppTheme.radiusSm),
+            child: InkWell(
+              onTap: widget.onSpeed,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                child: Text(
+                  '${widget.currentSpeed}x',
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),

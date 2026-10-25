@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../common/app_theme.dart';
+import '../focus_wrap.dart';
 
 /// 播放加载缓冲卡片（200ms 防闪烁防抖、350ms 最短展示、6s 慢网提醒），对齐 OHOS `PlayerLoadingCard`
 class PlayerLoadingCard extends StatefulWidget {
@@ -200,7 +201,8 @@ class _PlayerLoadingCardState extends State<PlayerLoadingCard> {
                 ),
                 if (widget.onRetry != null) ...[
                   const SizedBox(width: 8),
-                  GestureDetector(
+                  FocusTap(
+                    focusRadius: BorderRadius.circular(AppTheme.radiusSm),
                     onTap: _handleRetry,
                     child: const Text(
                       '点击重试',

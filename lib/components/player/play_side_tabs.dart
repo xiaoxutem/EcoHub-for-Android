@@ -4,6 +4,7 @@ import '../../models/film_models.dart';
 import '../empty_state.dart';
 import '../film_grid.dart';
 import '../loading_view.dart';
+import '../focus_wrap.dart';
 import 'play_detail_panel.dart';
 
 /// 播放页面侧边/底部切换面板（详情与相关推荐）
@@ -59,8 +60,9 @@ class PlaySideTabs extends StatelessWidget {
 
   Widget _buildTabItem(String title, int index) {
     final active = activeTab == index;
-    return GestureDetector(
+    return FocusTap(
       behavior: HitTestBehavior.opaque,
+      focusRadius: BorderRadius.circular(AppTheme.radiusSm),
       onTap: () => onTabChange(index),
       child: Padding(
         padding: const EdgeInsets.only(right: 20),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'common/app_theme.dart';
 import 'utils/app_orientation.dart';
 import 'utils/source_guard.dart';
+import 'utils/tv_mode.dart';
 import 'pages/splash_page.dart';
 import 'pages/main_scaffold_page.dart';
 import 'pages/server_config_page.dart';
@@ -39,12 +40,18 @@ const SystemUiOverlayStyle kDefaultSystemUiOverlayStyle = SystemUiOverlayStyle(
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 探测设备形态（Android TV / 遥控器模式），需在首帧前完成，
+  // 否则布局与焦点策略会先按手机形态渲染一次再跳变。
+  await TvMode.probe();
+
   // 沉浸式透明状态栏与边缘到边缘布局，透明导航条并禁用系统浅色强制对比度遮罩
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(kDefaultSystemUiOverlayStyle);
 
-  // 对齐 OHOS `AUTO_ROTATION_RESTRICTED`：默认自动旋转（竖屏 + 左右横屏，排除倒置）
-  SystemChrome.setPreferredOrientations(kAutoRotationOrientations);
+  // TV 端强制横屏；其余设备沿用自动旋转（竖屏 + 左右横屏，排除倒置）
+  SystemChrome.setPreferredOrientations(
+    TvMode.isTv ? TvMode.orientations : kAutoRotationOrientations,
+  );
 
   SourceGuard.navigatorKey = appNavigatorKey;
 
@@ -103,14 +110,23 @@ class _EcoHubAppState extends State<EcoHubApp> with WidgetsBindingObserver {
         theme: AppTheme.darkTheme,
         builder: (context, child) {
           final mediaQuery = MediaQuery.of(context);
+          // TV 端整体字号放大：观看距离 2~3 米，手机端的字号在电视上偏小。
+          // 仅在系统未做额外放大（scale == 1.0）时叠加 TV 系数，
+          // 用户主动调过字号时以系统设置为准，不覆盖无障碍需求。
+          final baseScale = mediaQuery.textScaler.scale(1);
+          final scaler = baseScale == 1.0 && TvMode.isTv
+              ? const TextScaler.linear(1.25)
+              : mediaQuery.textScaler;
           return MediaQuery(
             data: mediaQuery.copyWith(
-              textScaler: mediaQuery.textScaler.clamp(
+              textScaler: scaler.clamp(
                 minScaleFactor: 0.9,
-                maxScaleFactor: 1.1,
+                maxScaleFactor: TvMode.isTv ? 1.6 : 1.1,
               ),
             ),
-            child: child ?? const SizedBox.shrink(),
+            // TV 模式：建立焦点遍历组，让方向键在可聚焦控件之间按序移动；
+            // 同时提供全局快捷键（Esc 返回 / 媒体播放键）。
+            child: _buildRoot(child ?? const SizedBox.shrink(), mediaQuery),
           );
         },
         initialRoute: '/',
@@ -183,6 +199,30 @@ class _EcoHubAppState extends State<EcoHubApp> with WidgetsBindingObserver {
 
           return MaterialPageRoute(settings: settings, builder: (_) => page);
         },
+      ),
+    );
+  }
+
+  /// 构建根节点内容：TV 模式下套上焦点遍历组与全局遥控器快捷键。
+  Widget _buildRoot(Widget child, MediaQueryData mediaQuery) {
+    if (!TvMode.isTv) return child;
+
+    return FocusTraversalGroup(
+      // 阅读顺序策略：在网格/列表里按行优先的方向键遍历，与视觉排布一致，
+      // 避免使用 OrderedTraversalPolicy 时因缺少显式 order 而无法移动焦点。
+      policy: ReadingOrderTraversalPolicy(),
+      child: Shortcuts(
+        shortcuts: <ShortcutActivator, Intent>{
+          // 遥控器返回键：Esc 等价于关闭当前层
+          const SingleActivator(LogicalKeyboardKey.escape): const DismissIntent(),
+          // 媒体键
+          const SingleActivator(LogicalKeyboardKey.mediaPlay): const ActivateIntent(),
+          const SingleActivator(LogicalKeyboardKey.mediaPause): const ActivateIntent(),
+        },
+        child: Focus(
+          autofocus: true,
+          child: child,
+        ),
       ),
     );
   }

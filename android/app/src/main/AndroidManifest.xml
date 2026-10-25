@@ -5,10 +5,25 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
+    <!-- Android TV 兼容声明 -->
+    <!-- leanback：设备具备电视形态（10 英尺 UI、遥控器导航） -->
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+    <!-- 声明支持 touchscreen 但不强制要求，TV 设备无触摸屏也能安装 -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <!-- TV 端不具备触摸屏时仍可运行 -->
+    <uses-feature
+        android:name="android.hardware.gamepad"
+        android:required="false" />
+
     <application
         android:label="EcoHub"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:banner="@drawable/banner"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
@@ -17,7 +32,7 @@
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:supportsPictureInPicture="true"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode|navigation"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
             <!-- Specifies an Android theme to apply to this Activity as soon as
@@ -31,6 +46,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+                <!-- TV 启动器（leanback）入口，使应用出现在 Android TV 桌面 -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
             </intent-filter>
         </activity>
         <!-- 禁用系统对大屏/平板设备的强制旋转忽略与 Letterbox 覆盖，确保全屏旋转生效 -->

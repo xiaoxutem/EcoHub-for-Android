@@ -9,6 +9,7 @@ import '../components/loading_view.dart';
 import '../components/empty_state.dart';
 import '../api/http_client.dart';
 import '../utils/favorite_manager.dart';
+import '../components/focus_wrap.dart';
 import 'daily_update_pane.dart';
 
 const int _pageSize = 21;
@@ -205,9 +206,10 @@ class _DailyUpdatesTabState extends State<DailyUpdatesTab> with TickerProviderSt
 
   Widget _buildChip(int index, DailyUpdateCategory item, bool isWide) {
     final active = _currentIndex == index;
-    return GestureDetector(
+    return FocusTap(
       key: _chipKeys.length > index ? _chipKeys[index] : null,
       behavior: HitTestBehavior.opaque,
+      focusRadius: BorderRadius.circular(AppTheme.radiusPill),
       onTap: () => _selectIndex(index),
       child: Container(
         height: isWide ? 35 : 32,
@@ -314,8 +316,9 @@ class _DailyUpdatesTabState extends State<DailyUpdatesTab> with TickerProviderSt
                       ),
                     ],
                     const Spacer(),
-                    GestureDetector(
+                    FocusTap(
                       behavior: HitTestBehavior.opaque,
+                      focusRadius: BorderRadius.circular(16),
                       onTap: _fetchLock ? null : () => _loadMeta(fromPull: false),
                       child: Container(
                         width: 32,
