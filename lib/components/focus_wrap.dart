@@ -191,9 +191,13 @@ class _FocusTapState extends State<FocusTap> {
 /// [InkWell] 本身自带焦点能力（`canRequestFocus` 默认 true），
 /// 但默认焦点高亮很弱，在电视上几乎看不出来，这里补一层明显的描边。
 ///
-/// 实现要点：用 `canRequestFocus: false` 的观察型 [Focus] 节点。
-/// `FocusNode.hasFocus` 在「焦点位于本节点子树内」时同样为 true，
-/// 因此子级 InkWell 获得焦点时，本节点能同步感知到。
+/// 实现要点：使用 Flutter 官方的 [FocusableActionDetector]。
+/// 它的 `onShowFocusHighlight` 回调会在**焦点进入或离开本组件子树**时触发，
+/// 正是「我的子控件被选中了」这一信号的准确来源。
+///
+/// 为什么不用 `FocusNode.hasFocus` + 祖先链判定：
+/// InkWell 内部创建的焦点节点不对外暴露，且自行创建的观察节点会抢走方向键焦点。
+/// [FocusableActionDetector] 由框架处理这两点，无需自行管理节点。
 class FocusHighlight extends StatefulWidget {
   final Widget child;
   final BorderRadius? radius;
@@ -213,25 +217,10 @@ class FocusHighlight extends StatefulWidget {
 }
 
 class _FocusHighlightState extends State<FocusHighlight> {
-  final FocusNode _node = FocusNode(debugLabel: 'FocusHighlight');
   bool _focused = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _node.addListener(_handle);
-  }
-
-  @override
-  void dispose() {
-    _node.removeListener(_handle);
-    _node.dispose();
-    super.dispose();
-  }
-
-  void _handle() {
+  void _handleFocusHighlight(bool focused) {
     if (!mounted) return;
-    final focused = _node.hasFocus;
     if (focused != _focused) setState(() => _focused = focused);
   }
 
@@ -240,18 +229,16 @@ class _FocusHighlightState extends State<FocusHighlight> {
     if (!TvMode.isTv) return widget.child;
     final color = widget.color ?? const Color(0xFFFA8C16);
     final radius = widget.radius ?? BorderRadius.circular(8);
-    return Focus(
-      focusNode: _node,
-      // 不参与遍历，只作为焦点状态观察者：真正的焦点节点在子树的 InkWell 上。
-      canRequestFocus: false,
-      skipTraversal: true,
+    return FocusableActionDetector(
+      // 只观察焦点高亮状态，不接管激活行为（激活仍由子级 InkWell 自己处理）。
+      onShowFocusHighlight: _handleFocusHighlight,
       descendantsAreFocusable: true,
       child: AnimatedScale(
         scale: _focused && widget.scaleEnabled ? 1.05 : 1.0,
         duration: const Duration(milliseconds: 140),
         curve: Curves.easeOut,
         child: Stack(
-          // 与 FocusTap 一致：passthrough 保持传入约束不被放宽，
+          // passthrough 保持传入约束不被放宽，
           // 避免 Expanded 等场景下子组件塌陷。
           fit: StackFit.passthrough,
           children: [

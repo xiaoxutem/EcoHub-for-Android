@@ -168,6 +168,72 @@ void main() {
     });
   });
 
+  group('FocusHighlight 焦点高亮', () {
+    testWidgets('子级 InkWell 获得焦点时显示焦点框', (tester) async {
+      TvMode.debugSetTv(true);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                FocusHighlight(
+                  child: InkWell(
+                    onTap: () {},
+                    child: const SizedBox(width: 100, height: 50, child: Text('A')),
+                  ),
+                ),
+                FocusHighlight(
+                  child: InkWell(
+                    onTap: () {},
+                    child: const SizedBox(width: 100, height: 50, child: Text('B')),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      int overlayCount() => find
+          .byWidgetPredicate(
+            (w) => w is DecoratedBox && w.position == DecorationPosition.foreground,
+          )
+          .evaluate()
+          .length;
+
+      // 未聚焦时无焦点框
+      expect(overlayCount(), 0);
+
+      // 移动焦点后应出现焦点框
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      expect(overlayCount(), greaterThan(0), reason: '子控件聚焦后应显示焦点框');
+    });
+
+    testWidgets('非 TV 模式不渲染焦点框', (tester) async {
+      TvMode.debugSetTv(false);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: FocusHighlight(
+              child: InkWell(
+                onTap: () {},
+                child: const SizedBox(width: 100, height: 50, child: Text('A')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final overlays = find.byWidgetPredicate(
+        (w) => w is DecoratedBox && w.position == DecorationPosition.foreground,
+      );
+      expect(overlays, findsNothing);
+    });
+  });
+
   group('PlayerDpadController 播放器遥控控制', () {
     Widget buildPlayer({
       required VoidCallback onTogglePlay,

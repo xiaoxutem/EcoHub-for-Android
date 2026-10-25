@@ -12,6 +12,39 @@
 
 ---
 
+## 📺 Android TV 支持
+
+本分支（`xiaoxutem/EcoHub-for-Android`）在原版基础上增加了 **Android TV 遥控器适配**，
+应用会出现在 TV 桌面启动器中，可完全用遥控器操作。
+
+### 遥控器按键映射
+
+| 按键 | 行为 |
+| --- | --- |
+| 方向键 ↑↓←→ | 在界面元素间移动焦点；播放器内为音量（↑↓）与快进快退（←→） |
+| OK / 确认 | 激活当前焦点元素 |
+| 播放 / 暂停键 | 播放或暂停视频 |
+| 返回键 | 退出全屏 / 返回上一层 |
+
+### TV 端差异
+
+- **左侧竖排导航**：替代手机端的底部导航（1080p 屏下底部导航离观看位置过远）。
+- **强制横屏**、字号整体放大 1.25 倍。
+- **焦点高亮框**：当前选中项有明显的橙色描边，便于在电视上辨识。
+
+> 所有 TV 特性均由 `TvMode.isTv` 开关控制，**手机 / 平板端行为与原版完全一致**。
+
+### 涉及文件
+
+| 文件 | 作用 |
+| --- | --- |
+| `lib/utils/tv_mode.dart` | TV 设备探测（`FEATURE_LEANBACK` / `UI_MODE_TYPE_TELEVISION`）与缩放 |
+| `lib/components/focus_wrap.dart` | `FocusTap`（可聚焦点击容器）/ `FocusHighlight`（焦点高亮） |
+| `lib/components/player/player_dpad_controller.dart` | 播放器 D-pad 控制（进度 / 音量 / 播放暂停） |
+| `lib/components/tv_side_nav.dart` | TV 左侧竖排导航 |
+
+---
+
 ## 📥 下载安装
 
 - 🚀 **[下载最新版本 APK (Releases Latest)](https://github.com/fe-spark/EcoHub-for-Android/releases/latest)**
