@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../common/app_theme.dart';
 import '../components/page_header.dart';
 import '../utils/app_settings_manager.dart';
+import '../utils/tv_mode.dart';
 
 /// 设置页面，全量对齐 OHOS `SettingsPage.ets`
 class SettingsPage extends StatefulWidget {
@@ -12,11 +13,33 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  /// TV 模式开关的状态（供 ValueListenableBuilder 监听）。
+  final ValueNotifier<bool> _tvModeNotifier = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _tvModeNotifier.dispose();
+    super.dispose();
+  }
+
+  Future<void> _setTvMode(bool value) async {
+    await TvMode.setForcedTv(value);
+    _tvModeNotifier.value = value;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(value ? '已开启 TV 模式，重启应用后生效' : '已关闭 TV 模式，重启应用后生效'),
+        duration: const Duration(milliseconds: 1800),
+      ),
+    );
+  }
+
   String _cacheSize = '0.0 MB';
 
   @override
   void initState() {
     super.initState();
+    _tvModeNotifier.value = TvMode.forceTv;
     _refreshCacheSize();
   }
 
@@ -259,6 +282,32 @@ class _SettingsPageState extends State<SettingsPage> {
                               },
                             );
                           },
+                        ),
+                        const SizedBox(height: 14),
+
+                        // 1.5 TV 模式（遥控器适配）—— 便于在非 TV 设备上预览
+                        _sectionTitle('TV 模式'),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppTheme.bgElevated,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              width: 0.5,
+                            ),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: ValueListenableBuilder<bool>(
+                            valueListenable: _tvModeNotifier,
+                            builder: (context, forced, _) {
+                              return _buildSwitchRow(
+                                title: '强制启用 TV 模式',
+                                subtitle: '在非电视设备上套用遥控器导航布局与焦点框（需重启应用生效）',
+                                value: forced,
+                                onChanged: (v) => _setTvMode(v),
+                              );
+                            },
+                          ),
                         ),
                         const SizedBox(height: 14),
 

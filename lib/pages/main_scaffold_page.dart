@@ -205,7 +205,7 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
   /// 仍在焦点树中 —— 遥控器方向键会遍历到看不见的元素，切 tab 后焦点也可能
   /// 停留在已隐藏的控件上。TV 模式下用 [ExcludeFocus] 把非当前 tab 移出焦点链。
   Widget _tabGuard(int index, Widget child) {
-    if (!TvMode.isTv) return child;
+    if (!TvMode.isTvActive) return child;
     if (index == _currentTabIndex) return child;
     return ExcludeFocus(child: child);
   }
@@ -217,7 +217,7 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
     final hasModalOverlay = showNoticeOverlay || showUpdateOverlay;
 
     // TV 端使用左侧竖排导航（Android TV 标准布局）；其余平台沿用底部导航
-    final isTv = TvMode.isTv;
+    final isTv = TvMode.isTvActive;
 
     final contentBody = !_ready
         ? const LoadingView(label: '正在接入服务')

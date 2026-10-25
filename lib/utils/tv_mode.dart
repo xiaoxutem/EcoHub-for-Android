@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/widgets.dart';
 
 /// Android TV / 遥控器模式适配层。
@@ -27,6 +28,17 @@ class TvMode {
   /// 是否已完成过一次设备探测。用于避免重复调用平台通道。
   static bool _probed = false;
 
+  /// 用户手动强制开启 TV 模式（用于在非 TV 设备上预览遥控器布局）。
+  static bool _forcedTv = false;
+
+  static const String _forceKey = 'setting_force_tv_mode';
+
+  /// 强制 TV 模式开关。开启后即使设备不是 TV 也套用 TV 布局与遥控器适配。
+  static bool get forceTv => _forcedTv;
+
+  /// 是否应按 TV 模式渲染 —— 设备形态判定 + 用户手动强制。
+  static bool get isTvActive => _isTv || _forcedTv;
+
   /// TV 模式下的全局放大系数。
   ///
   /// TV 通常 10 英尺观看距离，同等像素密度下字号需要放大约 1.25 倍才够清晰。
@@ -52,6 +64,26 @@ class TvMode {
     } catch (_) {
       _isTv = false;
     }
+    await _loadForced();
+  }
+
+  /// 读取「强制 TV 模式」的持久化设置。
+  static Future<void> _loadForced() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _forcedTv = prefs.getBool(_forceKey) ?? false;
+    } catch (_) {
+      _forcedTv = false;
+    }
+  }
+
+  /// 设置「强制 TV 模式」。开启后需重启应用生效（布局在启动时确定）。
+  static Future<void> setForcedTv(bool value) async {
+    _forcedTv = value;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_forceKey, value);
+    } catch (_) {}
   }
 
   /// 依据窗口尺寸做启发式判断。
@@ -88,6 +120,7 @@ class TvMode {
   @visibleForTesting
   static void debugSetTv(bool value) {
     _isTv = value;
+    _forcedTv = false;
     _probed = true;
   }
 }

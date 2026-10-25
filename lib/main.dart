@@ -50,7 +50,7 @@ void main() async {
 
   // TV 端强制横屏；其余设备沿用自动旋转（竖屏 + 左右横屏，排除倒置）
   SystemChrome.setPreferredOrientations(
-    TvMode.isTv ? TvMode.orientations : kAutoRotationOrientations,
+    TvMode.isTvActive ? TvMode.orientations : kAutoRotationOrientations,
   );
 
   SourceGuard.navigatorKey = appNavigatorKey;
@@ -114,14 +114,14 @@ class _EcoHubAppState extends State<EcoHubApp> with WidgetsBindingObserver {
           // 仅在系统未做额外放大（scale == 1.0）时叠加 TV 系数，
           // 用户主动调过字号时以系统设置为准，不覆盖无障碍需求。
           final baseScale = mediaQuery.textScaler.scale(1);
-          final scaler = baseScale == 1.0 && TvMode.isTv
+          final scaler = baseScale == 1.0 && TvMode.isTvActive
               ? const TextScaler.linear(1.25)
               : mediaQuery.textScaler;
           return MediaQuery(
             data: mediaQuery.copyWith(
               textScaler: scaler.clamp(
                 minScaleFactor: 0.9,
-                maxScaleFactor: TvMode.isTv ? 1.6 : 1.1,
+                maxScaleFactor: TvMode.isTvActive ? 1.6 : 1.1,
               ),
             ),
             // TV 模式：建立焦点遍历组，让方向键在可聚焦控件之间按序移动；
@@ -205,7 +205,7 @@ class _EcoHubAppState extends State<EcoHubApp> with WidgetsBindingObserver {
 
   /// 构建根节点内容：TV 模式下套上焦点遍历组与全局遥控器快捷键。
   Widget _buildRoot(Widget child, MediaQueryData mediaQuery) {
-    if (!TvMode.isTv) return child;
+    if (!TvMode.isTvActive) return child;
 
     return FocusTraversalGroup(
       // 阅读顺序策略：在网格/列表里按行优先的方向键遍历，与视觉排布一致，

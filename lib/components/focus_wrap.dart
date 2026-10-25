@@ -157,7 +157,7 @@ class _FocusTapState extends State<FocusTap> {
       child: widget.child,
     );
 
-    if (!TvMode.isTv) {
+    if (!TvMode.isTvActive) {
       // 手机/平板：保持原始行为，零差异。
       return detector;
     }
@@ -228,7 +228,7 @@ class _FocusHighlightState extends State<FocusHighlight> {
 
   @override
   Widget build(BuildContext context) {
-    if (!TvMode.isTv) return widget.child;
+    if (!TvMode.isTvActive) return widget.child;
     final color = widget.color ?? const Color(0xFFFA8C16);
     final radius = widget.radius ?? BorderRadius.circular(8);
     return FocusableActionDetector(

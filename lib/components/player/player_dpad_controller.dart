@@ -168,7 +168,7 @@ class _PlayerDpadControllerState extends State<PlayerDpadController> {
   BuildContext? _hudContext;
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
-    if (!TvMode.isTv) return KeyEventResult.ignored;
+    if (!TvMode.isTvActive) return KeyEventResult.ignored;
 
     // 只处理按下事件，抬起时清理长按状态
     if (event is KeyUpEvent) {
@@ -244,7 +244,7 @@ class _PlayerDpadControllerState extends State<PlayerDpadController> {
   Widget build(BuildContext context) {
     // 非 TV 模式：不做任何按键接管，但 HUD 仍需正常渲染
     // （HUD 由本组件托管，因此这里必须一并输出）。
-    if (!TvMode.isTv) {
+    if (!TvMode.isTvActive) {
       if (widget.hudOverlay == null) return widget.child;
       return Stack(
         fit: StackFit.expand,
