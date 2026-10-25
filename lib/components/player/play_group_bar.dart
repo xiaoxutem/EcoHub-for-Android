@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../tv_focus_item.dart';
+import '../../utils/tv_focus_bridge.dart';
 import '../../common/app_theme.dart';
 import '../../models/film_models.dart';
 
@@ -32,6 +34,17 @@ class PlayGroupBar extends StatelessWidget {
   final List<PlaySource> sources;
   final String viewingSourceId;
   final ValueChanged<String>? onViewSource;
+
+  /// 请求进入全屏播放（电视上必需 —— HUD 的全屏按钮在视频区另一侧，走不到）。
+  final VoidCallback? onRequestFullscreen;
+
+  /// 焦点协调器：让线路 chip 按 → 显式跳到「全屏」按钮。
+  ///
+  /// 为什么必须显式跳转：线路 chip 在**横向滚动容器**里，
+  /// 而「全屏」按钮在 Tab 行（另一个容器）——
+  /// Flutter 的几何感知遍历在跨容器、x 方向重叠时行为不可预测，
+  /// 实测焦点会在「HD国语」和「第01集」之间来回跳，永远到不了全屏。
+  final TvFocusBridge? focusBridge;
   final bool needsGrouping;
   final int groupCount;
   final int currentGroup;
@@ -50,6 +63,8 @@ class PlayGroupBar extends StatelessWidget {
     required this.sources,
     required this.viewingSourceId,
     this.onViewSource,
+    this.onRequestFullscreen,
+    this.focusBridge,
     required this.needsGrouping,
     required this.groupCount,
     required this.currentGroup,
@@ -64,9 +79,9 @@ class PlayGroupBar extends StatelessWidget {
     this.groupRowKey,
   });
 
-  Widget _buildSourceChip(PlaySource source) {
+  Widget _buildSourceChip(PlaySource source, int index) {
     final active = viewingSourceId == source.id;
-    return InkWell(
+    final chip = InkWell(
       key: sourceKeys?[source.id],
       onTap: () => onViewSource?.call(source.id),
       borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -98,7 +113,22 @@ class PlayGroupBar extends StatelessWidget {
         ),
       ),
     );
+    if (focusBridge == null) return chip;
+    // TvFocusItem：按 → 显式跳到「全屏」按钮（绕过不可预测的几何遍历）。
+    return TvFocusItem(
+      bridge: focusBridge,
+      zone: 'player_line',
+      index: index,
+      // → 直接跳到 Tab 行右上角那个「全屏」按钮
+      // （它在固定位置、不会被横向滚动裁掉，始终可见可聚焦）。
+      rightZone: 'player_fullscreen',
+      rightIndex: 0,
+      focusRadius: BorderRadius.circular(AppTheme.radiusPill),
+      onTap: () => onViewSource?.call(source.id),
+      child: chip,
+    );
   }
+
 
   Widget _buildGroupChip(int index) {
     final active = currentGroup == index;
@@ -154,7 +184,7 @@ class PlayGroupBar extends StatelessWidget {
                 children: [
                   for (int i = 0; i < sources.length; i++) ...[
                     if (i > 0) const SizedBox(width: 8),
-                    _buildSourceChip(sources[i]),
+                    _buildSourceChip(sources[i], i),
                   ],
                 ],
               ),

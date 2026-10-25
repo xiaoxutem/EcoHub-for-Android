@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../common/app_theme.dart';
+import '../utils/tv_focus_bridge.dart';
+import 'tv_focus_item.dart';
 import '../models/film_models.dart';
 import '../utils/breakpoint.dart';
 import 'film_card.dart';
@@ -15,6 +17,21 @@ class FilmRow extends StatelessWidget {
   final double? leftInset;
   final double? rightInset;
 
+  /// 焦点协调器：用于把 ↑/↓ 的跨区域跳转变成确定行为。
+  final TvFocusBridge? focusBridge;
+
+  /// 本行在协调器中的区域名。
+  final String? focusZone;
+
+  /// 本行在区域内的下标。
+  final int focusIndex;
+
+  /// 按 ↑ 时跳回的区域（通常是分类标题行）。
+  final String? focusUpZone;
+
+  /// 按 ↑ 时跳回区域内的下标。
+  final int focusUpIndex;
+
   const FilmRow({
     super.key,
     required this.title,
@@ -24,6 +41,11 @@ class FilmRow extends StatelessWidget {
     this.onMore,
     this.leftInset,
     this.rightInset,
+    this.focusBridge,
+    this.focusZone,
+    this.focusIndex = 0,
+    this.focusUpZone,
+    this.focusUpIndex = 0,
   });
 
   void _openMore(BuildContext context) {
@@ -51,7 +73,12 @@ class FilmRow extends StatelessWidget {
     // 海报 2:3 + 标题上距 6 / 高 18 + 副标上距 2 / 高 15
     final rowHeight = cardW * 1.5 + 41;
 
-    return Container(
+    // FocusTraversalGroup：每一行电影划为一个独立的遍历组。
+    //
+    // 这样 ↓/↑ 键在「分类标题行」与各电影行之间按**组顺序**移动，
+    // 不会被几何位置相近的元素反复拉扯（表现为焦点框在标题与卡片间乱跳）。
+    return FocusTraversalGroup(
+      child: Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: AppTheme.spaceSm),
       padding: const EdgeInsets.symmetric(vertical: AppTheme.spaceMd),
@@ -147,14 +174,39 @@ class FilmRow extends StatelessWidget {
                 separatorBuilder: (context, index) =>
                     const SizedBox(width: AppTheme.spaceSm),
                 itemBuilder: (context, index) {
-                  return FilmCard(
+                  final card = FilmCard(
                     film: films[index],
                     cardWidth: cardW,
+                  );
+                  if (focusBridge == null || focusZone == null) return card;
+                  // 每一行电影划为一个独立的遍历组（见上方注释），
+                  // 卡片按 ↑ 时显式跳回对应的分类标题项。
+                  // 垂直方向的焦点序列（严格有序，绝不乱跳）：
+                  //   分类项 i ↓ → 本行第 1 张卡
+                  //   本行第 1 张卡 ↑ → 上一行第 1 张卡（第 1 行则回到分类项 i）
+                  //   本行任意卡 ↓ → 下一行第 1 张卡
+                  final isFirst = index == 0;
+                  final prevRowFirst = (focusIndex - 1) * 1000;
+                  return TvFocusItem(
+                    bridge: focusBridge,
+                    zone: focusZone,
+                    index: focusIndex * 1000 + index,
+                    // ↓ → 下一行的第一张卡
+                    downZone: focusZone,
+                    downIndex: (focusIndex + 1) * 1000,
+                    // ↑ → 上一行的第一张卡；第一行则回到分类标题项
+                    upZone: isFirst
+                        ? (focusIndex > 0 ? focusZone : focusUpZone)
+                        : focusZone,
+                    upIndex: isFirst ? prevRowFirst : focusUpIndex,
+                    focusRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    child: card,
                   );
                 },
               ),
             ),
         ],
+      ),
       ),
     );
   }

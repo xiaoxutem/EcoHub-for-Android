@@ -10,6 +10,7 @@ import 'player_dpad_controller.dart';
 import '../cast/player_cast_controller.dart';
 import '../cast/player_cast_hud.dart';
 import '../../types/dlna_types.dart';
+import '../../utils/tv_focus_scope.dart';
 
 /// 跨平台视频播放器，全量对齐 OHOS `VideoPlayer.ets`
 class VideoPlayerWidget extends StatefulWidget {
@@ -61,12 +62,30 @@ class VideoPlayerWidget extends StatefulWidget {
   });
 
   @override
-  State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+  State<VideoPlayerWidget> createState() => VideoPlayerWidgetState();
 }
 
-class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
+class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     with WidgetsBindingObserver
     implements PlayerCastHost {
+
+  /// HUD 控制条的焦点作用域。
+  ///
+  /// ## 为什么需要
+  ///
+  /// HUD 里的按钮（返回 / 投屏 / 画中画 / 全屏）都是小尺寸元素，
+  /// 而播放器上层有一个覆盖整个播放区域的 `Focus` 节点。
+  /// Flutter 的方向键遍历是**几何感知**的 —— 从覆盖全屏的大节点出发按 ↑，
+  /// 往往找不到 HUD 里那些小按钮（几何距离太远），
+  /// 于是焦点永远到不了全屏按钮（用户反馈：无法选择全屏）。
+  ///
+  /// ## 做法
+  ///
+  /// 把 HUD 包进独立的 [FocusScope]，非全屏时 HUD 一旦显示，
+  /// 就把焦点主动移进这个 scope —— [FocusScopeNode.requestFocus] 会自动
+  /// 选中 scope 内的**第一个**可聚焦元素（返回键），
+  /// 之后用户用 → 就能依次走到全屏按钮。
+  final FocusScopeNode _hudFocusScope = FocusScopeNode(debugLabel: 'playerHud');
   final PlayerPlaybackController _playback = PlayerPlaybackController();
   final PlayerCastController _castCtrl = PlayerCastController();
   late final PlayerPipCoordinator _pipCoord;
@@ -156,6 +175,36 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
     if (oldWidget.hasPrev != widget.hasPrev || oldWidget.hasNext != widget.hasNext) {
       _syncAutoPip();
     }
+  }
+
+  /// 把焦点移进 HUD 作用域（选中 scope 内第一个可聚焦元素）。
+  ///
+  /// 由播放页在需要时调用（例如侧栏按 ↑ 时跳到 HUD）。
+  void requestHudFocus() {
+    if (!mounted) return;
+
+    // HUD 已隐藏 → 先把它显示出来（否则里面没有可聚焦的按钮）。
+    if (!_playback.showHud) {
+      _playback.toggleHud();
+    }
+
+    // 下一帧再请求：此时 HUD 的按钮已完成构建并注册到 bridge。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      // 优先直接请求 HUD 第一个按钮（返回键）的节点 ——
+      // 比 requestFocus() 到整个 scope 更精确。
+      final bridge = TvFocusScope.maybeOf(context);
+      final node = bridge?.nodeOf('player_hud', 0);
+      if (node != null && node.canRequestFocus) {
+        node.requestFocus();
+        return;
+      }
+
+      // 兜底：请求 scope（Flutter 会在 scope 内选中第一个可聚焦后代）。
+      if (!_hudFocusScope.canRequestFocus) return;
+      _hudFocusScope.requestFocus();
+    });
   }
 
   @override
@@ -351,7 +400,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
                 // HUD 交给 D-pad 控制器托管：焦点落在 HUD 按钮上时，
                 // 方向键交还给焦点导航（可在按钮间移动），
                 // 焦点在视频画面上时才用于调音量/快进快退。
-                hudOverlay: PlayerSkinView(
+                hudOverlay: FocusScope(
+                  node: _hudFocusScope,
+                  child: PlayerSkinView(
                   isFull: widget.isFull,
                   edgeHud: widget.edgeHud,
                   showHud: _playback.showHud || pickerOpen,
@@ -433,6 +484,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
                   onCast: () => _castCtrl.openCastDialog(context),
                   onStopCast: () => _castCtrl.endCastByUser(),
                   onPip: _pipCoord.pipSupported ? _handleManualStartPip : null,
+                ),
                 ),
                 child: PlayerGestureHandler(
                   currentPosition: _playback.currentPosition,

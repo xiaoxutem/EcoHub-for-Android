@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../common/app_theme.dart';
+import '../components/tv_focus_item.dart';
 import '../models/film_models.dart';
 import '../api/film_api.dart';
 import '../components/film_card.dart';
@@ -317,7 +318,15 @@ class _DailyUpdatePaneState extends State<DailyUpdatePane> with AutomaticKeepAli
                     mainAxisSpacing: AppTheme.spaceMd,
                   ),
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) => FilmCard(film: _films[index]),
+                    (context, index) => TvFocusItem(
+                      // 网格内：→/← 在卡片间移动（默认行为）。
+                      // ↑/↓ 交给 bridge 显式接管，避免与上方 chip 行互相拉扯。
+                      zone: 'update_grid',
+                      index: index,
+                      upZone: 'update_chip',
+                      focusRadius: BorderRadius.circular(AppTheme.radiusMd),
+                      child: FilmCard(film: _films[index]),
+                    ),
                     childCount: _films.length,
                   ),
                 ),

@@ -5,6 +5,7 @@ import 'player_error_pad.dart';
 import 'player_bars.dart';
 import 'player_loading_card.dart';
 import '../focus_wrap.dart';
+import '../tv_focus_item.dart';
 
 /// 播放器覆盖层控制栏组件（全量对齐鸿蒙端 PlayerSkin）
 class PlayerSkinView extends StatelessWidget {
@@ -211,9 +212,38 @@ class PlayerSkinView extends StatelessWidget {
     );
   }
 
+  /// 构造一个 HUD 按钮。
+  ///
+  /// 用 [TvFocusItem] 而非裸 [FocusTap]：HUD 的按钮都是小尺寸元素，
+  /// 而页面其它可聚焦控件（侧栏的线路 / 选集等）在几何上与它们**不重叠** ——
+  /// 纯靠方向键的几何遍历永远走不到这里（用户反馈：无法选择全屏）。
+  ///
+  /// 注册到 `player_hud` 区域后，侧栏按 ↑ 就能显式跳到 HUD 的第一个按钮。
+  ///
+  /// [hudIndex] 是固定语义序号（不用递增计数器：PlayerSkinView 是
+  /// StatelessWidget，递增字段每次 build 都会重置，导致注册错乱）：
+  /// 0=返回 1=投屏 2=画中画 3=全屏 4=中心播放 5=快进/快退
+  Widget _hudButton({
+    required Widget child,
+    required VoidCallback? onTap,
+    required BorderRadius focusRadius,
+    required int hudIndex,
+    HitTestBehavior behavior = HitTestBehavior.opaque,
+  }) {
+    return TvFocusItem(
+      zone: 'player_hud',
+      index: hudIndex,
+      focusRadius: focusRadius,
+      onTap: onTap,
+      behavior: behavior,
+      child: child,
+    );
+  }
+
   Widget _buildCircleBtn({required String label, required VoidCallback onTap}) {
-    return FocusTap(
+    return _hudButton(
       focusRadius: BorderRadius.circular(22),
+      hudIndex: 5,
       onTap: onTap,
       child: Container(
         width: 44,
@@ -232,10 +262,16 @@ class PlayerSkinView extends StatelessWidget {
     );
   }
 
-  Widget _buildRoundBtn({required IconData icon, Color color = Colors.white, VoidCallback? onTap}) {
-    return FocusTap(
+  Widget _buildRoundBtn({
+    required IconData icon,
+    required int hudIndex,
+    Color color = Colors.white,
+    VoidCallback? onTap,
+  }) {
+    return _hudButton(
       behavior: HitTestBehavior.opaque,
       focusRadius: BorderRadius.circular(18),
+      hudIndex: hudIndex,
       onTap: onTap,
       child: Container(
         width: 36,
@@ -362,13 +398,14 @@ class PlayerSkinView extends StatelessWidget {
             child: Row(
               children: [
                 if (showBack)
-                  _buildRoundBtn(icon: Icons.arrow_back_ios_new_rounded, onTap: onBack)
+                  _buildRoundBtn(icon: Icons.arrow_back_ios_new_rounded, hudIndex: 0, onTap: onBack)
                 else
                   const SizedBox.shrink(),
                 const Spacer(),
                 if (canCast && onCast != null) ...[
                   _buildRoundBtn(
                     icon: castDeviceName.isNotEmpty ? Icons.power_settings_new_rounded : Icons.cast_rounded,
+                    hudIndex: 1,
                     color: castDeviceName.isNotEmpty ? AppTheme.danger : Colors.white,
                     onTap: castDeviceName.isNotEmpty ? onStopCast : onCast,
                   ),
@@ -377,6 +414,7 @@ class PlayerSkinView extends StatelessWidget {
                 if (onPip != null && castDeviceName.isEmpty) ...[
                   _buildRoundBtn(
                     icon: Icons.picture_in_picture_alt_rounded,
+                    hudIndex: 2,
                     onTap: onPip,
                   ),
                   const SizedBox(width: 8),
@@ -384,6 +422,7 @@ class PlayerSkinView extends StatelessWidget {
                 // 全屏按钮（非全屏时可见）—— 电视上没有全屏键就没法沉浸观看
                 _buildRoundBtn(
                   icon: Icons.fullscreen_rounded,
+                  hudIndex: 3,
                   onTap: onToggleFull,
                 ),
               ],

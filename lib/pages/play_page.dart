@@ -18,6 +18,8 @@ import '../components/player/live_play_body.dart';
 import '../components/loading_view.dart';
 import '../components/empty_state.dart';
 import '../services/pip_manager.dart';
+import '../utils/tv_focus_bridge.dart';
+import '../utils/tv_focus_scope.dart';
 
 /// 影片播放主页面
 class PlayPage extends StatefulWidget {
@@ -60,7 +62,15 @@ class _PlayPageState extends State<PlayPage> with WidgetsBindingObserver {
   bool _relateLoading = false;
   int _activeTab = 0;
   bool _playerFull = false;
-  final GlobalKey _videoKey = GlobalKey();
+  final GlobalKey<VideoPlayerWidgetState> _videoKey =
+      GlobalKey<VideoPlayerWidgetState>();
+
+  /// 焦点协调器：让侧栏与播放器 HUD 之间的方向键跳转确定可控。
+  ///
+  /// HUD 的按钮（返回 / 投屏 / 画中画 / 全屏）在左侧视频区，
+  /// 侧栏（线路 / 选集 / 详情）在右侧，两者几何上完全不重叠 ——
+  /// 纯靠方向键遍历永远走不到 HUD（用户反馈：无法选择全屏）。
+  final TvFocusBridge _focusBridge = TvFocusBridge();
   String _sourceName = '默认源';
   double _lastCurrentTime = 0;
   double _lastDuration = 0;
@@ -410,7 +420,11 @@ class _PlayPageState extends State<PlayPage> with WidgetsBindingObserver {
           _setFullscreen(false);
         }
       },
-      child: Scaffold(
+      // TvFocusScope：把焦点协调器下发给播放器 HUD 与侧栏，
+      // 让「侧栏 ↑ → HUD 按钮」这条跳转路径确定可控。
+      child: TvFocusScope(
+        bridge: _focusBridge,
+        child: Scaffold(
         backgroundColor: (_isPipActive || isFullMode) ? Colors.black : AppTheme.bg,
         resizeToAvoidBottomInset: false,
         body: SafeArea(
@@ -419,6 +433,7 @@ class _PlayPageState extends State<PlayPage> with WidgetsBindingObserver {
           left: !_isPipActive && !isFullMode && !split,
           right: !_isPipActive && !isFullMode && !split,
           child: _buildPlayBody(isFullMode: isFullMode, split: split),
+        ),
         ),
       ),
     );
@@ -452,6 +467,15 @@ class _PlayPageState extends State<PlayPage> with WidgetsBindingObserver {
 
     return LivePlayBody(
       isSplit: split,
+      // 侧栏按 ↑ → 显式把焦点移进播放器 HUD（返回 / 投屏 / 画中画 / 全屏）。
+      // HUD 在左侧视频区、侧栏在右侧，几何不重叠，纯靠方向键遍历到不了。
+      onRequestHudFocus: () {
+        _videoKey.currentState?.requestHudFocus();
+      },
+      // 侧栏顶部的全屏按钮 —— 电视上 HUD 的全屏按钮在另一侧，走不到。
+      onRequestFullscreen: () {
+        if (!_playerFull) _setFullscreen(true);
+      },
       playerWidget: _buildVideoPlayer(
         isFull: false,
         edgeHud: split,

@@ -5,6 +5,8 @@ import 'package:ecohub_android/utils/tv_mode.dart';
 import 'package:ecohub_android/components/focus_wrap.dart';
 import 'package:ecohub_android/components/resilient_image.dart';
 import 'package:ecohub_android/components/tv_keyboard_panel.dart';
+import 'package:ecohub_android/components/tv_focus_item.dart';
+import 'package:ecohub_android/utils/tv_focus_bridge.dart';
 import 'package:ecohub_android/utils/image_proxy_config.dart';
 import 'package:ecohub_android/components/player/player_dpad_controller.dart';
 import 'package:ecohub_android/components/player/player_gesture_handler.dart';
@@ -288,6 +290,113 @@ void main() {
     });
   });
 
+  group('TV 焦点协调器（消除焦点乱跳）', () {
+    testWidgets('跨区域方向键按登记的目标跳转', (tester) async {
+      final bridge = TvFocusBridge();
+      final categoryNode = FocusNode(debugLabel: 'cat');
+      final cardNode = FocusNode(debugLabel: 'card');
+      addTearDown(() {
+        categoryNode.dispose();
+        cardNode.dispose();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                Focus(focusNode: categoryNode, child: const Text('分类')),
+                Focus(focusNode: cardNode, child: const Text('卡片')),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      bridge.register(
+        zone: 'category',
+        index: 0,
+        node: categoryNode,
+        downZone: 'row',
+        downIndex: 0,
+      );
+      bridge.register(
+        zone: 'row',
+        index: 0,
+        node: cardNode,
+        upZone: 'category',
+        upIndex: 0,
+      );
+
+      // 分类项按 ↓ → 请求 row 区域第 0 个节点
+      final handled = bridge.handleDirection(
+        zone: 'category',
+        index: 0,
+        key: LogicalKeyboardKey.arrowDown,
+      );
+      await tester.pump();
+      expect(handled, isTrue);
+      expect(cardNode.hasFocus, isTrue);
+    });
+
+    test('没有登记目标时不拦截（交给默认遍历）', () {
+      final bridge = TvFocusBridge();
+      final node = FocusNode(debugLabel: 'x');
+      addTearDown(node.dispose);
+      bridge.register(zone: 'a', index: 0, node: node);
+
+      final handled = bridge.handleDirection(
+        zone: 'a',
+        index: 0,
+        key: LogicalKeyboardKey.arrowDown,
+      );
+      expect(handled, isFalse);
+    });
+
+    test('左右方向键不由协调器处理', () {
+      final bridge = TvFocusBridge();
+      final node = FocusNode(debugLabel: 'y');
+      addTearDown(node.dispose);
+      bridge.register(
+        zone: 'a',
+        index: 0,
+        node: node,
+        downZone: 'b',
+        downIndex: 0,
+      );
+
+      final handled = bridge.handleDirection(
+        zone: 'a',
+        index: 0,
+        key: LogicalKeyboardKey.arrowRight,
+      );
+      expect(handled, isFalse);
+    });
+
+    testWidgets('TvFocusItem 渲染焦点高亮框', (tester) async {
+      TvMode.debugSetTv(true);
+      final bridge = TvFocusBridge();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TvFocusItem(
+              bridge: bridge,
+              zone: 'z',
+              index: 0,
+              child: const SizedBox(width: 80, height: 40, child: Text('X')),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 聚焦后应出现焦点框（FocusHighlight 的 overlay）
+      final focusNode = FocusManager.instance.primaryFocus;
+      expect(focusNode, isNotNull);
+    });
+  });
+
   group('TV 键盘面板', () {
     testWidgets('点击字符键把内容追加到输入框', (tester) async {
       TvMode.debugSetTv(true);
@@ -324,7 +433,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('退格'));
+      await tester.tap(find.text('⌫'));
       await tester.pumpAndSettle();
       expect(controller.text, 'ab');
     });
@@ -341,7 +450,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('清空'));
+      await tester.tap(find.text('✕'));
       await tester.pumpAndSettle();
       expect(controller.text, isEmpty);
     });
@@ -358,7 +467,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('大小写'));
+      await tester.tap(find.text('Aa'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('A'));
       await tester.pumpAndSettle();

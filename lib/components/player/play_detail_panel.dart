@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../utils/tv_focus_bridge.dart';
 import '../../common/app_theme.dart';
 import '../../models/film_models.dart';
 import '../../utils/breakpoint.dart';
@@ -13,6 +14,12 @@ const double _epMinHeight = 44.0;
 
 /// 播放页选集与详情面板，全量对齐鸿蒙端 `PlayDetailPanel.ets`
 class PlayDetailPanel extends StatefulWidget {
+
+  /// 请求进入全屏播放（电视上必需 —— HUD 的全屏按钮在视频区另一侧，走不到）。
+  final VoidCallback? onRequestFullscreen;
+
+  /// 焦点协调器：用于线路 chip → 全屏按钮的显式跳转。
+  final TvFocusBridge? focusBridge;
   final String filmId;
   final String picture;
   final String name;
@@ -50,6 +57,8 @@ class PlayDetailPanel extends StatefulWidget {
     this.isSplit = false,
     this.episodeColumns,
     this.rightInset = 0,
+    this.onRequestFullscreen,
+    this.focusBridge,
   });
 
   @override
@@ -583,6 +592,8 @@ class _PlayDetailPanelState extends State<PlayDetailPanel> {
               sources: widget.sources,
               viewingSourceId: widget.viewingSourceId,
               onViewSource: widget.onViewSource,
+              onRequestFullscreen: widget.onRequestFullscreen,
+              focusBridge: widget.focusBridge,
               needsGrouping: _needsGrouping(),
               groupCount: _groupCount(),
               currentGroup: _groupOf(widget.viewingSourceId),

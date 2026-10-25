@@ -8,6 +8,8 @@ import '../api/film_api.dart';
 import '../components/loading_view.dart';
 import '../components/empty_state.dart';
 import '../components/film_row.dart';
+import '../utils/tv_focus_bridge.dart';
+import '../components/tv_focus_item.dart';
 import '../components/home_banner.dart';
 import '../components/focus_wrap.dart';
 import '../utils/favorite_manager.dart';
@@ -42,6 +44,16 @@ class _RecommendTabState extends State<RecommendTab> {
   int _reloadToken = 0;
   final ScrollController _scrollController = ScrollController();
 
+  /// 焦点协调器：控制「分类标题行 ↔ 电影行」之间的方向键跳转。
+  ///
+  /// 这两片区域在几何上紧挨着，Flutter 默认的几何感知焦点遍历会让 ↓/↑
+  /// 在其间反复横跳（电视上表现为焦点框乱窜）。这里显式指定跳转目标。
+  final TvFocusBridge _focusBridge = TvFocusBridge();
+
+  /// 区域名常量。
+  static const String _zoneCategory = 'category';
+  static const String _zoneRow = 'row';
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +65,7 @@ class _RecommendTabState extends State<RecommendTab> {
 
   @override
   void dispose() {
+    _focusBridge.clear();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     SourceGuard.offReconnect(_onReconnect);
@@ -156,12 +169,20 @@ class _RecommendTabState extends State<RecommendTab> {
     Navigator.pushNamed(context, '/filter', arguments: {'Pid': '$pid'});
   }
 
-  Widget _categoryEntry(HomeSection section, bool wide) {
+  Widget _categoryEntry(HomeSection section, bool wide, int index) {
     final glyph = _categoryGlyph(section.nav.name);
     return Padding(
       padding: EdgeInsets.only(right: wide ? 8 : AppTheme.spaceSm),
-      child: FocusHighlight(
-        radius: BorderRadius.circular(AppTheme.radiusPill),
+      // TvFocusItem：按 ↓ 跳到**对应的**电影行第一张卡，
+      // 按 ↑ 跳回分类标题行 —— 不再靠几何匹配猜。
+      child: TvFocusItem(
+        bridge: _focusBridge,
+        zone: _zoneCategory,
+        index: index,
+        downZone: _zoneRow,
+        downIndex: index,
+        upZone: _zoneCategory,
+        focusRadius: BorderRadius.circular(AppTheme.radiusPill),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -448,14 +469,28 @@ class _RecommendTabState extends State<RecommendTab> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.only(bottom: wide ? 14 : AppTheme.spaceLg),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.only(
-                      left: AppTheme.spaceLg + leftInset,
-                      right: AppTheme.spaceLg + rightInset,
-                    ),
-                    child: Row(
-                      children: sections.map((s) => _categoryEntry(s, wide)).toList(),
+                  // FocusTraversalGroup：把「分类标题行」划为一个独立的遍历组。
+                  //
+                  // 为什么要分组：分类行是**横向**排列，下面的 FilmRow 也是横向排列，
+                  // 两者几何位置挨得很近。默认的焦点遍历按几何位置找最近候选，
+                  // 于是 ↓ 键会在「分类标题」和「电影卡片」之间反复横跳 ——
+                  // 表现为焦点框在两处之间乱窜。
+                  //
+                  // 分组后，↓ 键按**组的顺序**移动（分类行组 → 第 1 个 FilmRow 组
+                  // → 第 2 个 …），行为完全确定。
+                  child: FocusTraversalGroup(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.only(
+                        left: AppTheme.spaceLg + leftInset,
+                        right: AppTheme.spaceLg + rightInset,
+                      ),
+                      child: Row(
+                        children: [
+                          for (var i = 0; i < sections.length; i++)
+                            _categoryEntry(sections[i], wide, i),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -472,6 +507,13 @@ class _RecommendTabState extends State<RecommendTab> {
                   leftInset: leftInset,
                   rightInset: rightInset,
                   onMore: () => _openFilter(section.nav.id),
+                  // 焦点协调：卡片按 ↑ 跳回对应的分类标题项；
+                  // 分类项按 ↓ 跳到本行第一张卡。
+                  focusBridge: _focusBridge,
+                  focusZone: _zoneRow,
+                  focusIndex: index,
+                  focusUpZone: _zoneCategory,
+                  focusUpIndex: index,
                 );
               },
             ),

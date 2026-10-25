@@ -4,9 +4,20 @@ import '../../components/player/play_side_tabs.dart';
 import '../../models/film_models.dart';
 import '../../utils/breakpoint.dart';
 import '../../utils/split_cutout_insets.dart';
+import '../tv_focus_item.dart';
 
 /// 现场播放页的主体布局（分屏与非分屏），对齐 PlayPage
 class LivePlayBody extends StatelessWidget {
+
+  /// 请求把焦点移进播放器的 HUD 控制条。
+  ///
+  /// 侧栏（线路 / 选集 / 详情）在**右侧**，HUD 按钮在**左侧视频区**右上角，
+  /// 两者几何上完全不重叠 —— 纯靠方向键遍历永远到不了 HUD
+  /// （用户反馈：全屏按钮选不中）。侧栏按 ↑ 时通过这个回调显式跳过去。
+  final VoidCallback? onRequestHudFocus;
+
+  /// 请求进入全屏播放（侧栏顶部的全屏按钮）。
+  final VoidCallback? onRequestFullscreen;
   final bool isSplit;
   final Widget playerWidget;
   final int activeTab;
@@ -52,10 +63,14 @@ class LivePlayBody extends StatelessWidget {
     required this.related,
     required this.onOpenRelated,
     required this.sourceName,
+    this.onRequestHudFocus,
+    this.onRequestFullscreen,
   });
 
   Widget _buildSideTabs(BuildContext context, {required int columns, bool split = false, double rightInset = 0}) {
     return PlaySideTabs(
+      onRequestHudFocus: onRequestHudFocus,
+      onRequestFullscreen: onRequestFullscreen,
       activeTab: activeTab,
       onTabChange: onTabChange,
       filmId: filmId,
@@ -101,18 +116,31 @@ class LivePlayBody extends StatelessWidget {
           Container(width: 1, color: const Color(0x24FFFFFF)),
           Expanded(
             flex: 5,
-            child: Container(
-              color: AppTheme.bgElevated,
-              child: SafeArea(
-                top: true,
-                bottom: true,
-                left: false,
-                right: false,
-                child: _buildSideTabs(
-                  context,
-                  columns: 3,
-                  split: true,
-                  rightInset: cutout.right,
+            // TvFocusItem：侧栏按 ↑ 显式跳到播放器的 HUD 按钮
+            //（全屏按钮就在那里）。
+            //
+            // 为什么需要显式跳转：HUD 按钮在左侧视频区的右上角，
+            // 侧栏在右侧，两者**几何上完全不重叠** ——
+            // 纯靠方向键的几何遍历永远走不到 HUD。
+            child: TvFocusItem(
+              zone: 'player_side',
+              index: 0,
+              upZone: 'player_hud',
+              upIndex: 0,
+              showHighlight: false,
+              child: Container(
+                color: AppTheme.bgElevated,
+                child: SafeArea(
+                  top: true,
+                  bottom: true,
+                  left: false,
+                  right: false,
+                  child: _buildSideTabs(
+                    context,
+                    columns: 3,
+                    split: true,
+                    rightInset: cutout.right,
+                  ),
                 ),
               ),
             ),
@@ -129,10 +157,18 @@ class LivePlayBody extends StatelessWidget {
         ),
         Container(height: 8, color: AppTheme.bgElevated),
         Expanded(
-          child: _buildSideTabs(
-            context,
-            columns: Breakpoint.gridColsOf(MediaQuery.sizeOf(context).width),
-            split: false,
+          // 同上：侧栏按 ↑ 显式跳到播放器 HUD（返回 / 投屏 / 画中画 / 全屏）。
+          child: TvFocusItem(
+            zone: 'player_side',
+            index: 0,
+            upZone: 'player_hud',
+            upIndex: 0,
+            showHighlight: false,
+            child: _buildSideTabs(
+              context,
+              columns: Breakpoint.gridColsOf(MediaQuery.sizeOf(context).width),
+              split: false,
+            ),
           ),
         ),
       ],

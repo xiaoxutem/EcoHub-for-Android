@@ -48,6 +48,44 @@
 | `lib/components/tv_keyboard_panel.dart` | 应用内 TV 软键盘（不依赖系统输入法） |
 | `lib/utils/image_host_guard.dart` | 图床可用性探测与熔断 |
 | `lib/utils/image_proxy_config.dart` | 图片代理前缀配置 |
+| `lib/components/tv_focus_item.dart` | 可聚焦 + 焦点框 + 跨区域方向键跳转 |
+| `lib/utils/tv_focus_bridge.dart` | 焦点区域协调器（消除焦点乱跳） |
+| `lib/utils/tv_focus_scope.dart` | 用 InheritedWidget 下发协调器 |
+
+### 焦点乱跳的根因与解法
+
+推荐页 / 更新页的结构是「横向分类标题行 + 若干横向电影行（网格）」。
+这些区域**几何位置紧挨着**，而 Flutter 默认的焦点遍历
+（`ReadingOrderTraversalPolicy`）是**几何感知**的 ——
+按方向键时在候选里挑「几何上最近」的元素。
+
+结果：↓/↑ 键在「分类标题」和「电影卡片」之间**反复横跳**，
+电视上表现为焦点框在两处之间乱窜，完全无法预测。
+
+单靠 `FocusTraversalGroup` 解决不了 —— 它只限定遍历范围，
+范围内的方向键选择依然是几何匹配。
+
+**本项目的解法**（`TvFocusBridge` + `TvFocusItem`）：
+
+- 把「分类标题行」「电影行」「网格」登记为不同的**区域**；
+- 跨区域的方向键（↓/↑）由协调器**显式指定目标**，
+  例如「电影卡片按 ↑ → 跳回对应的分类项」「分类项按 ↓ → 跳到对应行的第一张卡」；
+- 区域内移动（→/←）仍交给 Flutter 默认行为。
+
+协调器通过 `TvFocusScope`（InheritedWidget）下发给深层组件
+（如 `DailyUpdatePane` 内部的网格）。
+
+### 播放器 HUD 的焦点进入
+
+HUD 里的按钮（返回/投屏/画中画/全屏）都是小尺寸元素，
+而播放器上层有一个覆盖整个播放区域的 `Focus` 节点 ——
+从大节点出发按 ↑，几何距离太远，**永远找不到那些小按钮**，
+于是焦点到不了全屏按钮。
+
+解法：把 HUD 包进独立的 `FocusScope`，
+非全屏时 HUD 一旦显示就把焦点主动移进这个 scope
+（`FocusScopeNode.requestFocus` 会自动选中 scope 内第一个可聚焦元素），
+之后用 → 就能依次走到全屏按钮。
 
 ### TV 输入（Android TV 定制系统的坑）
 

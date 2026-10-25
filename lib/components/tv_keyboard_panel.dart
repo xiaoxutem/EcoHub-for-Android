@@ -104,18 +104,21 @@ class _TvKeyboardPanelState extends State<TvKeyboardPanel> {
           ],
           _buildRow(['1', '2', '3', '4', '5', '6', '7', '8', '9']),
           const SizedBox(height: 6),
+          // 用图标代替文字，避免汉字在窄格里被压缩导致字形错位。
           _buildRow([
             '0',
-            '退格',
-            '空格',
-            '清空',
+            '⌫',
+            '␣',
+            '✕',
           ], actionKeys: const {1, 2, 3}),
           const SizedBox(height: 6),
           _buildRow(letters.sublist(0, 13)),
           const SizedBox(height: 6),
           _buildRow([
             ...letters.sublist(13, 26),
-            '大小写',
+            // 用「Aa」而不是「大小写」——
+            // 三个汉字在等分的窄格子里会被压缩，字形挤在一起显得错位。
+            _letterGroup == 0 ? 'Aa' : 'aA',
             '完成',
           ], actionKeys: const {13, 14}),
         ],
@@ -174,19 +177,26 @@ class _TvKeyboardPanelState extends State<TvKeyboardPanel> {
     );
   }
 
+  /// 是否是符号类键（用图标，字体略大一些更清晰）。
+  static bool _isSymbolKey(String label) {
+    return label == '⌫' || label == '␣' || label == '✕' ||
+        label == 'Aa' || label == 'aA';
+  }
+
   Widget _buildKey(String label, {bool isAction = false}) {
     VoidCallback? onTap;
     switch (label) {
-      case '退格':
+      case '⌫':
         onTap = _backspace;
         break;
-      case '空格':
+      case '␣':
         onTap = () => _insert(' ');
         break;
-      case '清空':
+      case '✕':
         onTap = _clear;
         break;
-      case '大小写':
+      case 'Aa':
+      case 'aA':
         onTap = () => setState(() => _letterGroup = _letterGroup == 0 ? 1 : 0);
         break;
       case '完成':
@@ -213,7 +223,7 @@ class _TvKeyboardPanelState extends State<TvKeyboardPanel> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 15,
+            fontSize: _isSymbolKey(label) ? 17 : 15,
             fontWeight: isAction ? FontWeight.w600 : FontWeight.w400,
             color: isAction ? AppTheme.accent : AppTheme.textPrimary,
           ),

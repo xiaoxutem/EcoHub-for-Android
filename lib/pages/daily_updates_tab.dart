@@ -11,6 +11,9 @@ import '../api/http_client.dart';
 import '../utils/favorite_manager.dart';
 import '../components/focus_wrap.dart';
 import 'daily_update_pane.dart';
+import '../components/tv_focus_item.dart';
+import '../utils/tv_focus_bridge.dart';
+import '../utils/tv_focus_scope.dart';
 
 const int _pageSize = 21;
 
@@ -24,6 +27,9 @@ class DailyUpdatesTab extends StatefulWidget {
 
 class _DailyUpdatesTabState extends State<DailyUpdatesTab> with TickerProviderStateMixin {
   List<DailyUpdateCategory> _categories = [];
+
+  /// 焦点协调器：控制「分类切换 chip ↔ 影片网格」之间的方向键跳转。
+  final TvFocusBridge _focusBridge = TvFocusBridge();
   int _currentIndex = 0;
   bool _loading = true;
   String _errorText = '';
@@ -206,9 +212,14 @@ class _DailyUpdatesTabState extends State<DailyUpdatesTab> with TickerProviderSt
 
   Widget _buildChip(int index, DailyUpdateCategory item, bool isWide) {
     final active = _currentIndex == index;
-    return FocusTap(
+    // TvFocusItem：按 ↓ 跳到下方网格的第一张卡 ——
+    // chip 行与网格几何相邻，默认遍历会让焦点在两者间反复横跳。
+    return TvFocusItem(
       key: _chipKeys.length > index ? _chipKeys[index] : null,
-      behavior: HitTestBehavior.opaque,
+      zone: 'update_chip',
+      index: index,
+      downZone: 'update_grid',
+      downIndex: 0,
       focusRadius: BorderRadius.circular(AppTheme.radiusPill),
       onTap: () => _selectIndex(index),
       child: Container(
@@ -461,7 +472,11 @@ class _DailyUpdatesTabState extends State<DailyUpdatesTab> with TickerProviderSt
       );
     }
 
-    return Scaffold(
+    // TvFocusScope：把焦点协调器下发给网格等深层组件，
+    // 让 chip 与网格之间的方向键跳转确定可控。
+    return TvFocusScope(
+      bridge: _focusBridge,
+      child: Scaffold(
       backgroundColor: AppTheme.bg,
       body: Stack(
         children: [
@@ -482,6 +497,7 @@ class _DailyUpdatesTabState extends State<DailyUpdatesTab> with TickerProviderSt
             ),
           ),
         ],
+      ),
       ),
     );
   }
