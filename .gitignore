@@ -1,52 +1,32 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+# 注意：android/ 原生工程**是提交的**（沿用 RN TV 原仓库的做法）——
+# 因为里面有我们改过的包名、Kotlin 包路径、自定义的 RemoteInput / PanghuTls，
+# `expo prebuild --clean` 会把这些冲掉。
+# 只有构建产物忽略：
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# 构建产物
+*.apk
+*.aab
+.gradle/
+build/
+flutter/build/
+flutter/.dart_tool/
 .dart_tool/
+.packages
+.flutter-plugins
 .flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-/coverage/
 
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-/dist/
-/android/build/
-.vscode/
-
-# FVM
-.fvm/*
-!.fvm/fvm_config.json
+# 本地环境
+.env
+.env.local
+*.log
+.DS_Store
