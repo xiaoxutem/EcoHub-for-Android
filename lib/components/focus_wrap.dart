@@ -125,7 +125,9 @@ class _FocusTapState extends State<FocusTap> {
     // context.findRenderObject() 定位要滚入视口的目标。
     Scrollable.ensureVisible(
       context,
-      alignment: 0.5,
+      // alignment: 0 —— 与项目既有约定一致（见 filter_tag_row.dart 的 _jumpSelected）：
+      // 焦点项贴到可视区边缘而非被居中，避免长列表每次移动焦点都大幅重排。
+      alignment: 0,
       duration: const Duration(milliseconds: 180),
     );
   }

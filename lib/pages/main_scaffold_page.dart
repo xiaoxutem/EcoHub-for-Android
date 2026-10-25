@@ -199,6 +199,17 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
     });
   }
 
+  /// 包裹非当前 tab 的内容。
+  ///
+  /// [IndexedStack] 会把所有 tab 都保持挂载，未选中的 tab 里的可聚焦控件
+  /// 仍在焦点树中 —— 遥控器方向键会遍历到看不见的元素，切 tab 后焦点也可能
+  /// 停留在已隐藏的控件上。TV 模式下用 [ExcludeFocus] 把非当前 tab 移出焦点链。
+  Widget _tabGuard(int index, Widget child) {
+    if (!TvMode.isTv) return child;
+    if (index == _currentTabIndex) return child;
+    return ExcludeFocus(child: child);
+  }
+
   @override
   Widget build(BuildContext context) {
     final showNoticeOverlay = _showNotice && _ready && _siteOpen;
@@ -216,18 +227,18 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
                 index: _currentTabIndex,
                 children: [
                   if (_tabReady[0])
-                    RecommendTab(
+                    _tabGuard(0, RecommendTab(
                       siteName: _siteName,
                       onOpenSearch: () => Navigator.pushNamed(context, '/search'),
-                    )
+                    ))
                   else
                     const SizedBox.shrink(),
                   if (_tabReady[1])
-                    const DailyUpdatesTab()
+                    _tabGuard(1, const DailyUpdatesTab())
                   else
                     const SizedBox.shrink(),
                   if (_tabReady[2])
-                    const ProfileTab()
+                    _tabGuard(2, const ProfileTab())
                   else
                     const SizedBox.shrink(),
                 ],

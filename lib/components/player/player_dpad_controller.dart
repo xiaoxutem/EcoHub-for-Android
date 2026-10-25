@@ -18,7 +18,15 @@ import 'player_gesture_handler.dart';
 /// | OK / 播放键 | 播放 / 暂停切换              |
 /// | 返回键     | 退出全屏 / 关闭播放器          |
 ///
-/// 与触摸手势互不冲突：只有 TV 模式且焦点位于视频区域时才接管按键。
+/// ## 与方向键焦点导航的分工（重要）
+///
+/// Flutter 默认把方向键映射为 `DirectionalFocusIntent`（移动焦点）。
+/// 若本组件无条件消费方向键，HUD 上的播放/暂停/±10s/倍速按钮将**无法被
+/// 遥控器选中**，成为死代码。
+///
+/// 因此这里的策略是：**焦点位于 HUD 可交互控件上时，方向键交还给焦点导航；
+/// 焦点在视频画面上时，方向键才用于调整音量与进度。**
+/// 判定方式为「当前主焦点的 Element 是否位于 HUD 区域内」。
 class PlayerDpadController extends StatefulWidget {
   final Widget child;
   final bool isFull;
@@ -33,6 +41,11 @@ class PlayerDpadController extends StatefulWidget {
   final ValueChanged<double> onVolumeChange;
   final void Function(PlayerPanState state) onPanStateChange;
   final VoidCallback onToggleMute;
+
+  /// HUD 区域的控件（播放/暂停、±10s、倍速、全屏等）。
+  ///
+  /// 焦点落在这个子树里时，方向键让给焦点导航，不用于调整音量/进度。
+  final Widget? hudOverlay;
 
   const PlayerDpadController({
     super.key,
@@ -49,6 +62,7 @@ class PlayerDpadController extends StatefulWidget {
     required this.onVolumeChange,
     required this.onPanStateChange,
     required this.onToggleMute,
+    this.hudOverlay,
   });
 
   @override
@@ -57,11 +71,13 @@ class PlayerDpadController extends StatefulWidget {
 
 class _PlayerDpadControllerState extends State<PlayerDpadController> {
   final FocusNode _focusNode = FocusNode(debugLabel: 'PlayerDpad');
-  bool _hasFocus = false;
 
-  /// 长按左右键的连续快进/快退倍率与计时
-  int _seekHoldMultiplier = 1;
+  /// 长按左右键的连续快进/快退步长倍率与计时器
+  int _seekHoldSeconds = 10;
   Timer? _seekHoldTimer;
+
+  /// 累积的 seek 目标，避免连续快进基于陈旧的 currentPosition 累加。
+  Duration? _seekAccumulated;
 
   @override
   void initState() {
@@ -79,29 +95,28 @@ class _PlayerDpadControllerState extends State<PlayerDpadController> {
 
   void _handleFocusChange() {
     if (!mounted) return;
-    final has = _focusNode.hasFocus;
-    if (has != _hasFocus) {
-      setState(() => _hasFocus = has);
-      if (!has) _stopSeekHold();
-    }
+    // 焦点离开视频区时终止长按，避免定时器在后台继续跳进度。
+    if (!_focusNode.hasFocus) _stopSeekHold();
   }
 
   void _stopSeekHold() {
     _seekHoldTimer?.cancel();
     _seekHoldTimer = null;
-    if (_seekHoldMultiplier != 1) {
-      _seekHoldMultiplier = 1;
-    }
+    if (_seekHoldSeconds != 10) _seekHoldSeconds = 10;
   }
 
-  /// 单次跳转（秒）
+  /// 跳转到指定位置（相对当前）。
   void _seekBy(int seconds) {
     final total = widget.totalDuration.inSeconds;
-    final current = widget.currentPosition.inSeconds;
-    final target = (current + seconds).clamp(0, total > 0 ? total : current);
+    final base = _seekAccumulated ?? widget.currentPosition;
+    final target = (base.inSeconds + seconds).clamp(0, total > 0 ? total : base.inSeconds);
     final dur = Duration(seconds: target);
+    _seekAccumulated = dur;
     widget.onSeekTo(dur);
     final sign = seconds >= 0 ? '+' : '';
+    // 用 showTransient 播报：它会自动在提示结束后复位 kind=none，
+    // 而 setPanState 不会复位（会导致 HUD 永久驻留且 toggleHud 失效）。
+    widget.onPanStateChange(const PlayerPanState(kind: PlayerTipKind.none));
     widget.onPanStateChange(PlayerPanState(
       kind: seconds >= 0 ? PlayerTipKind.seekFwd : PlayerTipKind.seekBack,
       text: '$sign$seconds 秒',
@@ -112,21 +127,45 @@ class _PlayerDpadControllerState extends State<PlayerDpadController> {
   void _adjustVolume(double delta) {
     final next = (widget.currentVolume + delta).clamp(0.0, 1.0);
     widget.onVolumeChange(next);
+    widget.onPanStateChange(const PlayerPanState(kind: PlayerTipKind.none));
     widget.onPanStateChange(PlayerPanState(
       kind: PlayerTipKind.volume,
       text: '${(next * 100).round()}%',
     ));
   }
 
+  /// 开始长按连续快进/快退。步长按 10s → 30s → 60s 逐级提升并封顶。
   void _startSeekHold(int direction) {
     _stopSeekHold();
     _seekHoldTimer = Timer.periodic(const Duration(milliseconds: 400), (_) {
       if (!mounted) return;
-      // 长按加速：10s → 30s → 60s 逐级提升
-      _seekHoldMultiplier = _seekHoldMultiplier >= 6 ? 1 : _seekHoldMultiplier * 3;
-      _seekBy(direction * 10 * _seekHoldMultiplier);
+      _seekHoldSeconds = _seekHoldSeconds >= 60 ? 60 : (_seekHoldSeconds * 3).clamp(10, 60);
+      _seekBy(direction * _seekHoldSeconds);
     });
   }
+
+  /// 当前焦点是否落在 HUD 可交互控件上。
+  ///
+  /// 若在 HUD 上，方向键应交还给 Flutter 的焦点导航（移动到别的按钮），
+  /// 而不是被用于调整音量/进度。
+  bool _focusInHud() {
+    final primary = FocusManager.instance.primaryFocus;
+    if (primary == null) return false;
+    final hudContext = _hudContext;
+    if (hudContext == null) return false;
+
+    var found = false;
+    primary.context?.visitAncestorElements((ancestor) {
+      if (identical(ancestor, hudContext)) {
+        found = true;
+        return false;
+      }
+      return true;
+    });
+    return found;
+  }
+
+  BuildContext? _hudContext;
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (!TvMode.isTv) return KeyEventResult.ignored;
@@ -136,6 +175,7 @@ class _PlayerDpadControllerState extends State<PlayerDpadController> {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
           event.logicalKey == LogicalKeyboardKey.arrowRight) {
         _stopSeekHold();
+        _seekAccumulated = null;
       }
       return KeyEventResult.ignored;
     }
@@ -158,6 +198,20 @@ class _PlayerDpadControllerState extends State<PlayerDpadController> {
       widget.onTogglePlay();
       return KeyEventResult.handled;
     }
+
+    final isArrow = key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight;
+    if (!isArrow) return KeyEventResult.ignored;
+
+    // 焦点在 HUD 控件上时，方向键用于在按钮间移动焦点，不调整音量/进度。
+    // 返回 ignored 让事件继续冒泡到全局 Shortcuts 的 DirectionalFocusIntent。
+    if (_focusInHud()) return KeyEventResult.ignored;
+
+    // 非全屏（分栏）模式下，方向键留给页面列表滚动与焦点导航，
+    // 否则剧集列表、侧栏将无法用遥控器操作。
+    if (!widget.isFull) return KeyEventResult.ignored;
 
     // 音量：上下键
     if (key == LogicalKeyboardKey.arrowUp) {
@@ -188,14 +242,36 @@ class _PlayerDpadControllerState extends State<PlayerDpadController> {
 
   @override
   Widget build(BuildContext context) {
-    if (!TvMode.isTv) return widget.child;
+    // 非 TV 模式：不做任何按键接管，但 HUD 仍需正常渲染
+    // （HUD 由本组件托管，因此这里必须一并输出）。
+    if (!TvMode.isTv) {
+      if (widget.hudOverlay == null) return widget.child;
+      return Stack(
+        fit: StackFit.expand,
+        children: [widget.child, widget.hudOverlay!],
+      );
+    }
 
     return Focus(
       focusNode: _focusNode,
       canRequestFocus: true,
       autofocus: true,
       onKeyEvent: _handleKey,
-      child: widget.child,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          widget.child,
+          // HUD 单独包一层 Builder 以便记录其 Element 上下文，
+          // 用于判断当前焦点是否落在 HUD 区域内。
+          if (widget.hudOverlay != null)
+            Builder(
+              builder: (ctx) {
+                _hudContext = ctx;
+                return widget.hudOverlay!;
+              },
+            ),
+        ],
+      ),
     );
   }
 }

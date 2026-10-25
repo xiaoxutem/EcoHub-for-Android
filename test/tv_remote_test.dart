@@ -242,11 +242,14 @@ void main() {
       required ValueChanged<double> onVolumeChange,
       required void Function(PlayerPanState) onPanStateChange,
       bool muted = false,
+      bool isFull = true,
+      Widget? hudOverlay,
     }) {
       return MaterialApp(
         home: Scaffold(
           body: PlayerDpadController(
-            isFull: true,
+            isFull: isFull,
+            hudOverlay: hudOverlay,
             isPlaying: true,
             muted: muted,
             currentPosition: const Duration(seconds: 100),
@@ -345,6 +348,68 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlay);
       await tester.pump();
       expect(played, 1);
+    });
+
+    testWidgets('TV 模式：非全屏时方向键不调整音量（留给列表滚动）', (tester) async {
+      TvMode.debugSetTv(true);
+      final volumes = <double>[];
+      final seeks = <Duration>[];
+      await tester.pumpWidget(buildPlayer(
+        isFull: false,
+        onTogglePlay: () {},
+        onBack: () {},
+        onSeekTo: seeks.add,
+        onVolumeChange: volumes.add,
+        onPanStateChange: (_) {},
+      ));
+
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+
+      expect(volumes, isEmpty, reason: '非全屏时上下键不应调音量');
+      expect(seeks, isEmpty, reason: '非全屏时左右键不应快进');
+    });
+
+    testWidgets('TV 模式：焦点在 HUD 上时方向键让给焦点导航', (tester) async {
+      TvMode.debugSetTv(true);
+      final volumes = <double>[];
+      final seeks = <Duration>[];
+
+      // HUD 内放一个可聚焦按钮，模拟焦点落在 HUD 的情形
+      final hud = Builder(
+        builder: (ctx) => Align(
+          alignment: Alignment.bottomRight,
+          child: FocusTap(
+            onTap: () {},
+            child: const SizedBox(width: 80, height: 40, child: Text('HUD')),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(buildPlayer(
+        onTogglePlay: () {},
+        onBack: () {},
+        onSeekTo: seeks.add,
+        onVolumeChange: volumes.add,
+        onPanStateChange: (_) {},
+        hudOverlay: hud,
+      ));
+      await tester.pumpAndSettle();
+
+      // 把焦点移到 HUD 内的按钮上
+      final hudNode = _focusTapNode(tester);
+      expect(hudNode, isNotNull);
+      hudNode!.requestFocus();
+      await tester.pumpAndSettle();
+
+      // 方向键应让给焦点导航，不调整音量/进度
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump();
+      expect(volumes, isEmpty, reason: '焦点在 HUD 上时上下键应让给焦点导航');
+      expect(seeks, isEmpty, reason: '焦点在 HUD 上时左右键应让给焦点导航');
     });
 
     testWidgets('TV 模式：返回键触发退出', (tester) async {

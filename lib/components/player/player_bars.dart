@@ -67,9 +67,12 @@ class PlayerTopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          IconButton(
+          FocusHighlight(
+            radius: BorderRadius.circular(AppTheme.radiusMd),
+            child:           IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
             onPressed: onBack,
+          ),
           ),
           Expanded(
             child: Text(
@@ -94,10 +97,13 @@ class PlayerTopBar extends StatelessWidget {
               onPressed: onNext,
             ),
           if (onPip != null && castDeviceName.isEmpty && errorText.isEmpty)
-            IconButton(
+            FocusHighlight(
+              radius: BorderRadius.circular(AppTheme.radiusMd),
+              child:             IconButton(
               icon: const Icon(Icons.picture_in_picture_alt_rounded, color: Colors.white, size: 20),
               tooltip: '画中画',
               onPressed: onPip,
+            ),
             ),
         ],
       ),
@@ -248,9 +254,12 @@ class _PlayerBottomBarState extends State<PlayerBottomBar> {
             _buildSlider(context),
             Row(
               children: [
-                IconButton(
+                FocusHighlight(
+                  radius: BorderRadius.circular(AppTheme.radiusMd),
+                  child:                 IconButton(
                   icon: Icon(widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 24),
                   onPressed: widget.onTogglePlay,
+                ),
                 ),
                 Text(timeStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
                 const Spacer(),
@@ -286,17 +295,23 @@ class _PlayerBottomBarState extends State<PlayerBottomBar> {
                       ),
                     ),
                   ),
-                IconButton(
+                FocusHighlight(
+                  radius: BorderRadius.circular(AppTheme.radiusMd),
+                  child:                 IconButton(
                   icon: Icon(widget.muted ? Icons.volume_off_rounded : Icons.volume_up_rounded, color: Colors.white, size: 20),
                   onPressed: widget.onToggleMute,
                 ),
-                IconButton(
+                ),
+                FocusHighlight(
+                  radius: BorderRadius.circular(AppTheme.radiusMd),
+                  child:                 IconButton(
                   icon: Icon(
                     widget.isFull ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
                     color: Colors.white,
                     size: 22,
                   ),
                   onPressed: widget.onToggleFull,
+                ),
                 ),
               ],
             ),
@@ -319,13 +334,16 @@ class _PlayerBottomBarState extends State<PlayerBottomBar> {
       ),
       child: Row(
         children: [
-          IconButton(
+          FocusHighlight(
+            radius: BorderRadius.circular(AppTheme.radiusMd),
+            child:           IconButton(
             icon: Icon(
               widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
               color: Colors.white,
               size: 22,
             ),
             onPressed: widget.onTogglePlay,
+          ),
           ),
           Expanded(child: _buildSlider(context)),
           Text(
@@ -346,9 +364,12 @@ class _PlayerBottomBarState extends State<PlayerBottomBar> {
               ),
             ),
           ),
-          IconButton(
+          FocusHighlight(
+            radius: BorderRadius.circular(AppTheme.radiusMd),
+            child:           IconButton(
             icon: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 20),
             onPressed: widget.onToggleFull,
+          ),
           ),
         ],
       ),

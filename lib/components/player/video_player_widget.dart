@@ -348,6 +348,92 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
                     _castCtrl.pushCastVolume(_playback.muted ? 0.0 : _playback.volume);
                   }
                 },
+                // HUD 交给 D-pad 控制器托管：焦点落在 HUD 按钮上时，
+                // 方向键交还给焦点导航（可在按钮间移动），
+                // 焦点在视频画面上时才用于调音量/快进快退。
+                hudOverlay: PlayerSkinView(
+                  isFull: widget.isFull,
+                  edgeHud: widget.edgeHud,
+                  showHud: _playback.showHud || pickerOpen,
+                  showBack: widget.showBack,
+                  title: widget.title,
+                  isPlaying: _castCtrl.isCasting
+                      ? (_castCtrl.session.phase == CastPhase.playing)
+                      : _playback.isPlaying,
+                  isBuffering: _castCtrl.isCasting
+                      ? (_castCtrl.session.phase == CastPhase.launching)
+                      : _playback.isBuffering,
+                  isOpening: _castCtrl.isCasting ? false : _playback.isOpening,
+                  pickerOpen: pickerOpen,
+                  loadSessionId: _playback.initSessionId,
+                  isReady: _castCtrl.isCasting ? true : _playback.isReady,
+                  isCompleted: _castCtrl.isCasting ? false : _playback.isCompleted,
+                  muted: _playback.muted,
+                  errorText: _playback.errorText,
+                  currentPosition: _castCtrl.isCasting
+                      ? Duration(seconds: currentPosition.toInt())
+                      : _playback.displayPosition,
+                  totalDuration: _castCtrl.isCasting
+                      ? Duration(seconds: totalDuration.toInt())
+                      : _playback.totalDuration,
+                  currentSpeed: _playback.currentSpeed,
+                  scaleLabel: PlayerScale.label(_playback.scaleMode),
+                  hasPrev: widget.hasPrev,
+                  hasNext: widget.hasNext,
+                  panState: _playback.panState,
+                  topInset: widget.topInset,
+                  leftInset: widget.leftInset,
+                  rightInset: widget.rightInset,
+                  bottomInset: widget.bottomInset,
+                  castDeviceName: _castCtrl.deviceName,
+                  canCast: widget.videoUrl.trim().isNotEmpty,
+                  onBack: () {
+                    if (widget.isFull) {
+                      _toggleFullscreen();
+                    } else {
+                      widget.onBack?.call();
+                    }
+                  },
+                  onTogglePlay: () {
+                    if (!_castCtrl.isCasting) {
+                      if (_playback.controller == null && _playback.isCompleted) {
+                        _playback.initPlayer(widget.videoUrl, initialTime: 0, autoPlay: true);
+                      } else {
+                        _playback.togglePlay();
+                      }
+                    }
+                  },
+                  onToggleFull: _toggleFullscreen,
+                  onToggleMute: () {
+                    _playback.toggleMute();
+                    if (_castCtrl.isCasting) {
+                      _castCtrl.pushCastVolume(_playback.muted ? 0.0 : _playback.volume);
+                    }
+                  },
+                  onSpeed: () => PlayerSpeedSheet.show(context, _playback.currentSpeed, _playback.setSpeed),
+                  onScale: _playback.cycleScale,
+                  onRetry: () {
+                    if (!_castCtrl.isCasting) {
+                      _playback.initPlayer(widget.videoUrl);
+                    }
+                  },
+                  onPrev: widget.onPrev,
+                  onNext: widget.onNext,
+                  onSeekBack10: () {
+                    final target = Duration(seconds: (currentPosition - 10).clamp(0, totalDuration).toInt());
+                    _playback.seekTo(target);
+                  },
+                  onSeekFwd10: () {
+                    final target = Duration(seconds: (currentPosition + 10).clamp(0, totalDuration).toInt());
+                    _playback.seekTo(target);
+                  },
+                  onSeekStart: _playback.setDragPreview,
+                  onSeekProgress: _playback.setDragPreview,
+                  onSeekTo: _playback.seekTo,
+                  onCast: () => _castCtrl.openCastDialog(context),
+                  onStopCast: () => _castCtrl.endCastByUser(),
+                  onPip: _pipCoord.pipSupported ? _handleManualStartPip : null,
+                ),
                 child: PlayerGestureHandler(
                   currentPosition: _playback.currentPosition,
                   totalDuration: _playback.totalDuration,
@@ -394,91 +480,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
                     onStopCast: () => _castCtrl.endCastByUser(),
                   ),
                 ),
-              PlayerSkinView(
-                isFull: widget.isFull,
-                edgeHud: widget.edgeHud,
-                showHud: _playback.showHud || pickerOpen,
-                showBack: widget.showBack,
-                title: widget.title,
-                isPlaying: _castCtrl.isCasting
-                    ? (_castCtrl.session.phase == CastPhase.playing)
-                    : _playback.isPlaying,
-                isBuffering: _castCtrl.isCasting
-                    ? (_castCtrl.session.phase == CastPhase.launching)
-                    : _playback.isBuffering,
-                isOpening: _castCtrl.isCasting ? false : _playback.isOpening,
-                pickerOpen: pickerOpen,
-                loadSessionId: _playback.initSessionId,
-                isReady: _castCtrl.isCasting ? true : _playback.isReady,
-                isCompleted: _castCtrl.isCasting ? false : _playback.isCompleted,
-                muted: _playback.muted,
-                errorText: _playback.errorText,
-                currentPosition: _castCtrl.isCasting
-                    ? Duration(seconds: _castCtrl.session.positionSec.toInt())
-                    : _playback.displayPosition,
-                totalDuration: _castCtrl.isCasting
-                    ? (_castCtrl.session.durationSec > 0
-                        ? Duration(seconds: _castCtrl.session.durationSec.toInt())
-                        : _playback.totalDuration)
-                    : _playback.totalDuration,
-                currentSpeed: _playback.currentSpeed,
-                scaleLabel: PlayerScale.label(_playback.scaleMode),
-                hasPrev: widget.hasPrev,
-                hasNext: widget.hasNext,
-                panState: _playback.panState,
-                topInset: widget.topInset,
-                leftInset: widget.leftInset,
-                rightInset: widget.rightInset,
-                bottomInset: widget.bottomInset,
-                castDeviceName: _castCtrl.deviceName,
-                canCast: widget.videoUrl.trim().isNotEmpty,
-                onBack: () {
-                  if (widget.isFull) {
-                    _toggleFullscreen();
-                  } else {
-                    widget.onBack?.call();
-                  }
-                },
-                onTogglePlay: () {
-                  if (!_castCtrl.isCasting) {
-                    if (_playback.controller == null && _playback.isCompleted) {
-                      _playback.initPlayer(widget.videoUrl, initialTime: 0, autoPlay: true);
-                    } else {
-                      _playback.togglePlay();
-                    }
-                  }
-                },
-                onToggleFull: _toggleFullscreen,
-                onToggleMute: () {
-                  _playback.toggleMute();
-                  if (_castCtrl.isCasting) {
-                    _castCtrl.pushCastVolume(_playback.muted ? 0.0 : _playback.volume);
-                  }
-                },
-                onSpeed: () => PlayerSpeedSheet.show(context, _playback.currentSpeed, _playback.setSpeed),
-                onScale: _playback.cycleScale,
-                onRetry: () {
-                  if (!_castCtrl.isCasting) {
-                    _playback.initPlayer(widget.videoUrl);
-                  }
-                },
-                onPrev: widget.onPrev,
-                onNext: widget.onNext,
-                onSeekBack10: () {
-                  final target = Duration(seconds: (currentPosition - 10).clamp(0, totalDuration).toInt());
-                  _playback.seekTo(target);
-                },
-                onSeekFwd10: () {
-                  final target = Duration(seconds: (currentPosition + 10).clamp(0, totalDuration).toInt());
-                  _playback.seekTo(target);
-                },
-                onSeekStart: _playback.setDragPreview,
-                onSeekProgress: _playback.setDragPreview,
-                onSeekTo: _playback.seekTo,
-                onCast: () => _castCtrl.openCastDialog(context),
-                onStopCast: () => _castCtrl.endCastByUser(),
-                onPip: _pipCoord.pipSupported ? _handleManualStartPip : null,
-              ),
             ],
           ),
         );
