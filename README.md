@@ -44,6 +44,25 @@
 | `lib/components/tv_side_nav.dart` | TV 左侧竖排导航 |
 | `lib/components/resilient_image.dart` | 封面多地址回退 + 首字占位图 |
 | `lib/utils/image_cache_manager.dart` | 全局图片缓存与解码尺寸限制 |
+| `lib/components/tv_text_field.dart` | TV 输入框（聚焦时主动拉起输入法 + 焦点框） |
+| `lib/components/tv_keyboard_panel.dart` | 应用内 TV 软键盘（不依赖系统输入法） |
+| `lib/utils/image_host_guard.dart` | 图床可用性探测与熔断 |
+| `lib/utils/image_proxy_config.dart` | 图片代理前缀配置 |
+
+### TV 输入（Android TV 定制系统的坑）
+
+很多 Android TV 定制系统（如 VIDAA / 海信）**不提供 TV 版软键盘面板**：
+`TextInput.show` 只会把 IME 标记为「已请求」（`mShowExplicitlyRequested=true`），
+但 `mIsInputViewShown` 始终是 `false` —— 界面根本不弹，用户完全无法打字。
+
+本项目的处理：
+
+- `TvTextField`：获得焦点时显式调用 `TextInput.show`（对支持的系统有效），
+  并画出明显的焦点框。
+- `TvKeyboardPanel`：**应用内自绘键盘**，遥控器逐键选择，完全不依赖系统输入法。
+  包含符号行、数字行、字母行（大小写切换）、退格/空格/清空/完成。
+  退格采用 TV 通用行为 —— **始终删除最后一个字符**（电视上没有可见光标，
+  「删光标前一个」会让人困惑）；顶部还有一条输入预览带，明确当前输入内容。
 
 ### 性能与体验优化
 

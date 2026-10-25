@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../common/app_theme.dart';
 import '../models/film_models.dart';
@@ -219,7 +220,7 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
   Widget build(BuildContext context) {
     final showNoticeOverlay = _showNotice && _ready && _siteOpen;
     final showUpdateOverlay = _showUpdateDialog && AppVersionUtil.getCachedUpdateInfo() != null;
-    final hasModalOverlay = showNoticeOverlay || showUpdateOverlay;
+    // 返回键统一由下方的 PopScope 回调处理（见该处注释）。
 
     // TV 端使用左侧竖排导航（Android TV 标准布局）；其余平台沿用底部导航
     final isTv = TvMode.isTvActive;
@@ -312,7 +313,17 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
     );
 
     return PopScope(
-      canPop: !hasModalOverlay,
+      // 始终拦截返回键，由回调自己决定行为。
+      //
+      // 为什么不在 build 里用 `Navigator.canPop()` 判断根路由：
+      // 那个时机 Navigator 尚未完成当前路由注册，判断不可靠 ——
+      // 实测会导致第一次按 BACK 直接退出 App。
+      //
+      // 行为：
+      // - 有弹窗 → 关弹窗
+      // - 路由栈里还有上层页面 → 正常 pop
+      // - 已在根页面 → 「再按一次退出」（电视上 BACK 极易误触）
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (showNoticeOverlay) {

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ecohub_android/utils/tv_mode.dart';
 import 'package:ecohub_android/components/focus_wrap.dart';
 import 'package:ecohub_android/components/resilient_image.dart';
+import 'package:ecohub_android/components/tv_keyboard_panel.dart';
 import 'package:ecohub_android/utils/image_proxy_config.dart';
 import 'package:ecohub_android/components/player/player_dpad_controller.dart';
 import 'package:ecohub_android/components/player/player_gesture_handler.dart';
@@ -284,6 +285,84 @@ void main() {
       expect(a1, isNotNull);
       expect(a1, a2, reason: '同一部影片的占位色应稳定');
       expect(a1, isNot(b), reason: '不同影片的占位色应不同');
+    });
+  });
+
+  group('TV 键盘面板', () {
+    testWidgets('点击字符键把内容追加到输入框', (tester) async {
+      TvMode.debugSetTv(true);
+      final controller = TextEditingController();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TvKeyboardPanel(controller: controller),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 点数字键 1
+      await tester.tap(find.text('1'));
+      await tester.pumpAndSettle();
+      expect(controller.text, '1');
+
+      // 点字母 a
+      await tester.tap(find.text('a'));
+      await tester.pumpAndSettle();
+      expect(controller.text, '1a');
+    });
+
+    testWidgets('退格键删除最后一个字符', (tester) async {
+      TvMode.debugSetTv(true);
+      final controller = TextEditingController(text: 'abc');
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TvKeyboardPanel(controller: controller),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('退格'));
+      await tester.pumpAndSettle();
+      expect(controller.text, 'ab');
+    });
+
+    testWidgets('清空键清空输入框', (tester) async {
+      TvMode.debugSetTv(true);
+      final controller = TextEditingController(text: 'abc');
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TvKeyboardPanel(controller: controller),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('清空'));
+      await tester.pumpAndSettle();
+      expect(controller.text, isEmpty);
+    });
+
+    testWidgets('大小写切换后输出大写字母', (tester) async {
+      TvMode.debugSetTv(true);
+      final controller = TextEditingController();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TvKeyboardPanel(controller: controller),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('大小写'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A'));
+      await tester.pumpAndSettle();
+      expect(controller.text, 'A');
     });
   });
 

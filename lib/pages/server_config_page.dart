@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../common/app_theme.dart';
 import '../utils/server_config_manager.dart';
+import '../utils/tv_mode.dart';
 import '../utils/source_guard.dart';
 import '../utils/site_heartbeat.dart';
 import '../api/http_client.dart';
@@ -9,6 +10,8 @@ import '../api/film_api.dart';
 import '../components/app_icon.dart';
 import '../components/server_history_dialog.dart';
 import '../components/focus_wrap.dart';
+import '../components/tv_text_field.dart';
+import '../components/tv_keyboard_panel.dart';
 import 'main_scaffold_page.dart';
 
 /// 软件源配置页，对齐 OHOS `ServerConfigPage`
@@ -201,17 +204,16 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
           child: Row(
             children: [
               Expanded(
-                child: TextField(
+                // TvTextField：TV 上聚焦时主动拉起输入法，并画出明显的焦点框 ——
+                // 原生 TextField 在 Android TV 上键盘不弹、焦点几乎不可见。
+                child: TvTextField(
                   controller: _controller,
                   style: TextStyle(fontSize: inputFont, color: AppTheme.textPrimary),
+                  hintText: '请输入软件源地址',
+                  hintStyle: TextStyle(fontSize: inputFont, color: AppTheme.textMuted),
                   cursorColor: AppTheme.accent,
-                  decoration: InputDecoration(
-                    hintText: '请输入软件源地址',
-                    hintStyle: TextStyle(fontSize: inputFont, color: AppTheme.textMuted),
-                    border: InputBorder.none,
-                    isDense: true,
-                  ),
                   textInputAction: TextInputAction.done,
+                  focusRadius: BorderRadius.circular(AppTheme.radiusMd),
                   onChanged: (_) => setState(() {}),
                   onSubmitted: (_) => _saveAndConnect(),
                 ),
@@ -229,11 +231,26 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
             ],
           ),
         ),
+        // TV：很多 Android TV 定制系统不提供 TV 版软键盘面板
+        // （`TextInput.show` 只会标记「已请求」但界面不弹），
+        // 用户因此完全无法输入。这里提供应用内自绘键盘，遥控器可逐键选择。
+        if (TvMode.isTvActive) ...[
+          SizedBox(height: landscape ? 8 : 12),
+          TvKeyboardPanel(
+            controller: _controller,
+            onChanged: (_) => setState(() {}),
+            onDone: _saveAndConnect,
+          ),
+        ],
         SizedBox(height: landscape ? 12 : 24),
         SizedBox(
           width: double.infinity,
           height: inputH,
-          child: ElevatedButton(
+          // FocusHighlight：Material 按钮自带焦点能力，但高亮太弱，
+          // 电视上看不出当前选中的是哪个按钮。
+          child: FocusHighlight(
+            radius: BorderRadius.circular(AppTheme.radiusMd),
+            child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accent,
               foregroundColor: AppTheme.textPrimary,
@@ -245,6 +262,7 @@ class _ServerConfigPageState extends State<ServerConfigPage> {
             child: Text(
               _isLoading ? '正在连接...' : (_reconnect ? '重新接入' : '开始观影'),
               style: TextStyle(fontSize: landscape ? 15 : 16, fontWeight: FontWeight.bold),
+            ),
             ),
           ),
         ),

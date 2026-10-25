@@ -8,9 +8,11 @@ import 'package:flutter/foundation.dart';
 /// 避免首页 200+ 张卡片发起注定失败的请求（这是首屏卡顿的主要原因）。
 Future<List<String>> runNetworkProbe() async {
   const urls = [
+    // 已知被防盗链拦截的图床
     'https://image.jinyingimage.com/cover/db6f1d8c10a1170e858ef8c58dd333f8.jpg',
+    // 常见可用图床
+    'https://fffgood.com/upload/vod/20260728-1/c9df361b629e044fa72af9e30939b95a.jpg',
     'https://image.tmdb.org/t/p/w500/v0k3PygrKjsguztUTxi2d88y6Ie.jpg',
-    'https://eco.fe-spark.cn/api/index',
   ];
   final out = <String>[];
   for (final u in urls) {

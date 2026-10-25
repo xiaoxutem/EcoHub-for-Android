@@ -28,6 +28,8 @@ class ImageHostGuard {
   /// 已知被封的图床（内置名单）。
   ///
   /// 这些是实测确认会返回 403 的图床，先验加入避免首次启动时的无效请求风暴。
+  ///
+  /// 注意：`fffgood.com`（部分自建源使用）实测可用，**不要**加进来。
   static const Set<String> knownBlockedHosts = {
     'image.jinyingimage.com',
   };

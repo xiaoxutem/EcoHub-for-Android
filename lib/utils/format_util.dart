@@ -156,6 +156,9 @@ class FormatUtil {
       referer = 'https://www.youku.com/';
     } else if (host.contains('mgtv.com')) {
       referer = 'https://www.mgtv.com/';
+    } else if (host.contains('fffgood.com')) {
+      // 部分自建源使用 fffgood 图床，携带来源站 Referer 更稳妥。
+      referer = 'https://fffgood.com/';
     }
 
     final headers = <String, String>{

@@ -127,11 +127,18 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         actions: [
-          TextButton(
+          // TV：弹窗按钮同样需要明显的焦点框，
+          // 否则用户在电视上看不清当前选中「取消」还是「清理」。
+          FocusHighlight(
+            radius: BorderRadius.circular(AppTheme.radiusSm),
+            child: TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('取消', style: TextStyle(color: AppTheme.textMuted)),
+            ),
           ),
-          TextButton(
+          FocusHighlight(
+            radius: BorderRadius.circular(AppTheme.radiusSm),
+            child: TextButton(
             onPressed: () async {
               Navigator.pop(dialogCtx);
               await AppSettingsManager.instance.clearCache();
@@ -147,6 +154,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: const Text(
               '清理',
               style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold),
+            ),
             ),
           ),
         ],
@@ -183,7 +191,11 @@ class _SettingsPageState extends State<SettingsPage> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    return Padding(
+    // TV：Switch 自身可聚焦，但 Material 默认高亮在电视上几乎不可见 ——
+    // 整行包一层 FocusHighlight，让用户能确认当前选中的是哪个开关。
+    return FocusHighlight(
+      radius: BorderRadius.circular(AppTheme.radiusSm),
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
@@ -219,6 +231,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -228,7 +241,11 @@ class _SettingsPageState extends State<SettingsPage> {
     required String extra,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    // TV：InkWell 可聚焦但默认高亮几乎不可见，补明显的焦点框，
+    // 否则用户在设置页看不到当前选中了哪一项。
+    return FocusHighlight(
+      radius: BorderRadius.circular(AppTheme.radiusSm),
+      child: InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -273,6 +290,7 @@ class _SettingsPageState extends State<SettingsPage> {
               color: AppTheme.textMuted,
             ),
           ],
+        ),
         ),
       ),
     );
