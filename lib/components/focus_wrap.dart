@@ -12,11 +12,13 @@ class _FocusBorderOverlay extends StatelessWidget {
   final bool focused;
   final BorderRadius radius;
   final Color color;
+  final double spread;
 
   const _FocusBorderOverlay({
     required this.focused,
     required this.radius,
     required this.color,
+    required this.spread,
   });
 
   @override
@@ -31,9 +33,9 @@ class _FocusBorderOverlay extends StatelessWidget {
             border: Border.all(color: color, width: TvMode.focusBorderWidth),
             boxShadow: [
               BoxShadow(
-                color: color.withValues(alpha: 0.32),
-                blurRadius: 10,
-                spreadRadius: TvMode.focusSpread,
+                color: color.withValues(alpha: 0.38),
+                blurRadius: 12,
+                spreadRadius: spread,
               ),
             ],
           ),
@@ -68,8 +70,8 @@ class FocusTap extends StatefulWidget {
   /// 自定义焦点高亮描边色，默认主题橙色。
   final Color? focusColor;
 
-  /// 高亮框是否随焦点一起放大。
-  final bool focusScaleEnabled;
+  /// 焦点高亮框的外发光扩散距离。
+  final double focusSpread;
 
   /// 是否在获得焦点时自动滚动进视口。
   final bool autoEnsureVisible;
@@ -82,7 +84,7 @@ class FocusTap extends StatefulWidget {
     required this.child,
     this.focusRadius,
     this.focusColor,
-    this.focusScaleEnabled = true,
+    this.focusSpread = TvMode.focusSpread,
     this.autoEnsureVisible = true,
   });
 
@@ -170,19 +172,22 @@ class _FocusTapState extends State<FocusTap> {
       canRequestFocus: widget.onTap != null || widget.onLongPress != null,
       skipTraversal: widget.onTap == null && widget.onLongPress == null,
       onKeyEvent: _handleKey,
-      child: AnimatedScale(
-        scale: _focused && widget.focusScaleEnabled ? 1.06 : 1.0,
-        duration: const Duration(milliseconds: 140),
-        curve: Curves.easeOut,
-        child: Stack(
-          // 必须用 passthrough：Stack 默认的 loose 会把传入的紧约束放宽，
-          // 导致 Expanded 等场景下子组件塌陷成 0 尺寸（TV 与手机布局不一致）。
-          fit: StackFit.passthrough,
-          children: [
-            detector,
-            _FocusBorderOverlay(focused: _focused, radius: radius, color: color),
-          ],
-        ),
+      // 刻意**不用** AnimatedScale 做「选中放大」：缩放会改变渲染尺寸，
+      // 焦点框与相邻元素的相对位置随之漂移，电视上表现为焦点框跳动/错位。
+      // 纯描边高亮不影响布局，位置绝对稳定。
+      child: Stack(
+        // 必须用 passthrough：Stack 默认的 loose 会把传入的紧约束放宽，
+        // 导致 Expanded 等场景下子组件塌陷成 0 尺寸（TV 与手机布局不一致）。
+        fit: StackFit.passthrough,
+        children: [
+          detector,
+          _FocusBorderOverlay(
+            focused: _focused,
+            radius: radius,
+            color: color,
+            spread: widget.focusSpread,
+          ),
+        ],
       ),
     );
   }
@@ -193,25 +198,29 @@ class _FocusTapState extends State<FocusTap> {
 /// [InkWell] 本身自带焦点能力（`canRequestFocus` 默认 true），
 /// 但默认焦点高亮很弱，在电视上几乎看不出来，这里补一层明显的描边。
 ///
-/// 实现要点：使用 Flutter 官方的 [FocusableActionDetector]。
-/// 它的 `onShowFocusHighlight` 回调会在**焦点进入或离开本组件子树**时触发，
-/// 正是「我的子控件被选中了」这一信号的准确来源。
+/// 实现要点：**监听 [FocusManager.primaryFocus] 的变化**，
+/// 沿焦点节点的祖先链回溯，判断当前焦点是否落在本组件子树内。
 ///
-/// 为什么不用 `FocusNode.hasFocus` + 祖先链判定：
-/// InkWell 内部创建的焦点节点不对外暴露，且自行创建的观察节点会抢走方向键焦点。
-/// [FocusableActionDetector] 由框架处理这两点，无需自行管理节点。
+/// 为什么不用 `FocusableActionDetector`：
+/// 它的 `onShowFocusHighlight` 受 `FocusManager.highlightMode` 门控 ——
+/// Android 默认是 `touch` 模式（首次硬件按键前不显示焦点框），
+/// 而 TV 上焦点框必须**始终可见**，该机制不可靠。
+///
+/// 为什么不用自建的观察型 `Focus` 节点：
+/// `canRequestFocus: true` 的观察节点会**抢走**方向键焦点，
+/// 导致真正的 InkWell 反而拿不到焦点（实测按方向键后 `primaryFocus` 变为 null）。
 class FocusHighlight extends StatefulWidget {
   final Widget child;
   final BorderRadius? radius;
   final Color? color;
-  final bool scaleEnabled;
+  final double focusSpread;
 
   const FocusHighlight({
     super.key,
     required this.child,
     this.radius,
     this.color,
-    this.scaleEnabled = true,
+    this.focusSpread = TvMode.focusSpread,
   });
 
   @override
@@ -221,9 +230,47 @@ class FocusHighlight extends StatefulWidget {
 class _FocusHighlightState extends State<FocusHighlight> {
   bool _focused = false;
 
-  void _handleFocusHighlight(bool focused) {
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_handleFocusChange);
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
     if (!mounted) return;
+    final focused = _primaryFocusInSubtree();
     if (focused != _focused) setState(() => _focused = focused);
+  }
+
+  /// 判断当前主焦点是否位于本组件子树内。
+  ///
+  /// 沿焦点节点的祖先链回溯，比较其所属 Element 是否是本组件的后代。
+  bool _primaryFocusInSubtree() {
+    final primary = FocusManager.instance.primaryFocus;
+    if (primary == null) return false;
+    FocusNode? node = primary;
+    while (node != null) {
+      final ctx = node.context;
+      if (ctx != null) {
+        var found = false;
+        ctx.visitAncestorElements((ancestor) {
+          if (identical(ancestor.widget, widget)) {
+            found = true;
+            return false;
+          }
+          return true;
+        });
+        if (found) return true;
+      }
+      node = node.parent;
+    }
+    return false;
   }
 
   @override
@@ -231,24 +278,19 @@ class _FocusHighlightState extends State<FocusHighlight> {
     if (!TvMode.isTvActive) return widget.child;
     final color = widget.color ?? const Color(0xFFFA8C16);
     final radius = widget.radius ?? BorderRadius.circular(8);
-    return FocusableActionDetector(
-      // 只观察焦点高亮状态，不接管激活行为（激活仍由子级 InkWell 自己处理）。
-      onShowFocusHighlight: _handleFocusHighlight,
-      descendantsAreFocusable: true,
-      child: AnimatedScale(
-        scale: _focused && widget.scaleEnabled ? 1.05 : 1.0,
-        duration: const Duration(milliseconds: 140),
-        curve: Curves.easeOut,
-        child: Stack(
-          // passthrough 保持传入约束不被放宽，
-          // 避免 Expanded 等场景下子组件塌陷。
-          fit: StackFit.passthrough,
-          children: [
-            widget.child,
-            _FocusBorderOverlay(focused: _focused, radius: radius, color: color),
-          ],
+    return Stack(
+      // passthrough 保持传入约束不被放宽，
+      // 避免 Expanded 等场景下子组件塌陷。
+      fit: StackFit.passthrough,
+      children: [
+        widget.child,
+        _FocusBorderOverlay(
+          focused: _focused,
+          radius: radius,
+          color: color,
+          spread: widget.focusSpread,
         ),
-      ),
+      ],
     );
   }
 }

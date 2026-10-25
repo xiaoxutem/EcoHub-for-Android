@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../common/app_theme.dart';
 import '../models/film_models.dart';
 import '../utils/breakpoint.dart';
 import '../utils/format_util.dart';
 import '../utils/server_config_manager.dart';
 import 'focus_wrap.dart';
+import 'resilient_image.dart';
 
 /// 首页 Banner，对齐 OHOS `HomeBanner.ets`
 class HomeBanner extends StatefulWidget {
@@ -132,13 +132,14 @@ class _HomeBannerState extends State<HomeBanner> {
     }
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      child: CachedNetworkImage(
-        imageUrl: url,
-        httpHeaders: FormatUtil.imageHeaders(url),
-        fit: BoxFit.cover,
+      child: SizedBox(
         width: double.infinity,
         height: double.infinity,
-        errorWidget: (context, url, error) => const ColoredBox(color: AppTheme.bgCard),
+        child: ResilientNetworkImage(
+          urls: [url],
+          fit: BoxFit.cover,
+          backgroundColor: AppTheme.bgCard,
+        ),
       ),
     );
   }

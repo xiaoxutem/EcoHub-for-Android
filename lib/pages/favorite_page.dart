@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../common/app_theme.dart';
 import '../models/film_models.dart';
 import '../utils/breakpoint.dart';
@@ -10,6 +9,7 @@ import '../utils/source_guard.dart';
 import '../utils/nav_util.dart';
 import '../components/page_header.dart';
 import '../components/empty_state.dart';
+import '../components/resilient_image.dart';
 
 /// 我的收藏，对齐 OHOS `FavoritePage.ets`
 class FavoritePage extends StatefulWidget {
@@ -95,14 +95,11 @@ class _FavoritePageState extends State<FavoritePage> {
       child: SizedBox(
         width: 80,
         height: 116,
-        child: url.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: url,
-                httpHeaders: FormatUtil.imageHeaders(url),
-                fit: BoxFit.cover,
-                errorWidget: (context, url, error) => const ColoredBox(color: AppTheme.bgElevated),
-              )
-            : const ColoredBox(color: AppTheme.bgElevated),
+        child: ResilientNetworkImage(
+          urls: url.isEmpty ? const [] : [url],
+          fit: BoxFit.cover,
+          backgroundColor: AppTheme.bgElevated,
+        ),
       ),
     );
   }

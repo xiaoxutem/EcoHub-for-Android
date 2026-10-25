@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../common/app_theme.dart';
 import '../models/film_models.dart';
 import '../utils/format_util.dart';
@@ -10,6 +9,7 @@ import '../utils/nav_util.dart';
 import '../components/page_header.dart';
 import '../components/empty_state.dart';
 import '../components/focus_wrap.dart';
+import '../components/resilient_image.dart';
 
 /// 观看历史页面
 class HistoryPage extends StatefulWidget {
@@ -167,14 +167,11 @@ class _HistoryPageState extends State<HistoryPage> {
                                         child: SizedBox(
                                           width: 80,
                                           height: 116,
-                                          child: posterUrl.isNotEmpty
-                                              ? CachedNetworkImage(
-                                                  imageUrl: posterUrl,
-                                                  httpHeaders: FormatUtil.imageHeaders(posterUrl),
-                                                  fit: BoxFit.cover,
-                                                  errorWidget: (context, url, error) => _buildPosterPlaceholder(item.name),
-                                                )
-                                              : _buildPosterPlaceholder(item.name),
+                                          child: ResilientNetworkImage(
+                                            urls: posterUrl.isEmpty ? const [] : [posterUrl],
+                                            fallbackName: item.name,
+                                            fit: BoxFit.cover,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -296,15 +293,4 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  Widget _buildPosterPlaceholder(String name) {
-    return Container(
-      color: AppTheme.bgElevated,
-      child: Center(
-        child: Text(
-          name.isNotEmpty ? name.substring(0, 1) : '影',
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
-        ),
-      ),
-    );
-  }
 }

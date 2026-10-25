@@ -60,27 +60,49 @@ class FormatUtil {
   }
 
   static String poster(MovieBasicInfo film) {
-    String raw = '';
-    if (film.picture.isNotEmpty) {
-      raw = film.picture;
-    } else if (film.poster.isNotEmpty) {
-      raw = film.poster;
-    } else if (film.pictureSlide.isNotEmpty) {
-      raw = film.pictureSlide;
+    final list = posterCandidates(film);
+    return list.isEmpty ? '' : list.first;
+  }
+
+  /// 影片封面的候选地址列表（按优先级）。
+  ///
+  /// 有些图床（如 `image.jinyingimage.com`）会对特定网络环境返回 403，
+  /// 此时仅靠单一地址就会整个列表空白。这里把同一影片的多个可用字段
+  /// 都列出来，前端按序回退，尽量保证有图可显示。
+  static List<String> posterCandidates(MovieBasicInfo film) {
+    final out = <String>[];
+    void add(String raw) {
+      if (raw.isEmpty) return;
+      final resolved = ServerConfigManager.instance.resolveMediaUrl(raw);
+      if (resolved.isEmpty || out.contains(resolved)) return;
+      out.add(resolved);
     }
-    return ServerConfigManager.instance.resolveMediaUrl(raw);
+
+    add(film.picture);
+    add(film.poster);
+    add(film.pictureSlide);
+    return out;
+  }
+
+  /// 轮播图封面的候选地址列表（按优先级）。
+  static List<String> bannerPosterCandidates(BannerItem item) {
+    final out = <String>[];
+    void add(String raw) {
+      if (raw.isEmpty) return;
+      final resolved = ServerConfigManager.instance.resolveMediaUrl(raw);
+      if (resolved.isEmpty || out.contains(resolved)) return;
+      out.add(resolved);
+    }
+
+    add(item.poster);
+    add(item.picture);
+    add(item.pictureSlide);
+    return out;
   }
 
   static String bannerPoster(BannerItem item) {
-    String raw = '';
-    if (item.poster.isNotEmpty) {
-      raw = item.poster;
-    } else if (item.picture.isNotEmpty) {
-      raw = item.picture;
-    } else if (item.pictureSlide.isNotEmpty) {
-      raw = item.pictureSlide;
-    }
-    return ServerConfigManager.instance.resolveMediaUrl(raw);
+    final list = bannerPosterCandidates(item);
+    return list.isEmpty ? '' : list.first;
   }
 
   static String bannerBackdrop(BannerItem item) {

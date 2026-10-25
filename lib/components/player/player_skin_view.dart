@@ -353,6 +353,7 @@ class PlayerSkinView extends StatelessWidget {
               onPip: onPip,
             ),
           ),
+        // 非全屏时也要提供「进入全屏」入口 —— 电视上没有全屏键就没法沉浸观看。
         if (!isFull && (showBack || canCast || onPip != null))
           Positioned(
             left: _edge(6, leftInset),
@@ -373,11 +374,18 @@ class PlayerSkinView extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                 ],
-                if (onPip != null && castDeviceName.isEmpty)
+                if (onPip != null && castDeviceName.isEmpty) ...[
                   _buildRoundBtn(
                     icon: Icons.picture_in_picture_alt_rounded,
                     onTap: onPip,
                   ),
+                  const SizedBox(width: 8),
+                ],
+                // 全屏按钮（非全屏时可见）—— 电视上没有全屏键就没法沉浸观看
+                _buildRoundBtn(
+                  icon: Icons.fullscreen_rounded,
+                  onTap: onToggleFull,
+                ),
               ],
             ),
           ),

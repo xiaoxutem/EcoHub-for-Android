@@ -205,9 +205,14 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
   /// 仍在焦点树中 —— 遥控器方向键会遍历到看不见的元素，切 tab 后焦点也可能
   /// 停留在已隐藏的控件上。TV 模式下用 [ExcludeFocus] 把非当前 tab 移出焦点链。
   Widget _tabGuard(int index, Widget child) {
-    if (!TvMode.isTvActive) return child;
     if (index == _currentTabIndex) return child;
-    return ExcludeFocus(child: child);
+    // 非当前 tab：移出焦点链（遥控器不该遍历到看不见的元素），
+    // 并停止其动画与定时器（TickerMode.enabled = false）——
+    // 隐藏的 tab 继续跑轮播定时器是卡顿的主要来源之一。
+    return TickerMode(
+      enabled: false,
+      child: ExcludeFocus(child: child),
+    );
   }
 
   @override

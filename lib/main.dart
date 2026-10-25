@@ -44,6 +44,15 @@ void main() async {
   // 否则布局与焦点策略会先按手机形态渲染一次再跳变。
   await TvMode.probe();
 
+  // TV 模式强制焦点高亮模式为 traditional。
+  // Android 默认是 touch 模式 —— 首次硬件按键前不显示任何焦点高亮，
+  // 而 TV 上必须始终能看到当前选中项。Material 自带控件（Slider、IconButton 等）
+  // 的焦点高亮也依赖这个模式。
+  if (TvMode.isTvActive) {
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+  }
+
   // 沉浸式透明状态栏与边缘到边缘布局，透明导航条并禁用系统浅色强制对比度遮罩
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(kDefaultSystemUiOverlayStyle);

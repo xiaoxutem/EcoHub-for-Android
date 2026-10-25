@@ -182,7 +182,6 @@ class _PlayerGestureHandlerState extends State<PlayerGestureHandler> {
             // 而双击/长按/拖动等手势仍由外层手势层处理，两者互不影响。
             child: FocusTap(
               behavior: HitTestBehavior.opaque,
-              focusScaleEnabled: false,
               onTap: widget.onSingleTap,
               child: widget.child,
             ),

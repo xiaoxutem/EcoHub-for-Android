@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ecohub_android/utils/tv_mode.dart';
 import 'package:ecohub_android/components/focus_wrap.dart';
+import 'package:ecohub_android/components/resilient_image.dart';
 import 'package:ecohub_android/components/player/player_dpad_controller.dart';
 import 'package:ecohub_android/components/player/player_gesture_handler.dart';
 
@@ -231,6 +232,57 @@ void main() {
         (w) => w is DecoratedBox && w.position == DecorationPosition.foreground,
       );
       expect(overlays, findsNothing);
+    });
+  });
+
+  group('封面回退与占位', () {
+    testWidgets('图片全部失败时展示带首字的占位图而非空白', (tester) async {
+      TvMode.debugSetTv(true);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 100,
+              height: 150,
+              child: ResilientNetworkImage(
+                urls: [],
+                fallbackName: '赛博朋克村庄',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 无候选地址 → 直接渲染占位图
+      expect(find.text('赛'), findsOneWidget);
+    });
+
+    testWidgets('占位图颜色由名称哈希决定且同片稳定', (tester) async {
+      TvMode.debugSetTv(true);
+      Future<Color?> colorOf(String name) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 100,
+                height: 150,
+                child: ResilientNetworkImage(urls: const [], fallbackName: name),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final dec = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
+        return (dec.decoration as BoxDecoration).gradient?.colors.first;
+      }
+
+      final a1 = await colorOf('流浪地球');
+      final a2 = await colorOf('流浪地球');
+      final b = await colorOf('星际穿越');
+      expect(a1, isNotNull);
+      expect(a1, a2, reason: '同一部影片的占位色应稳定');
+      expect(a1, isNot(b), reason: '不同影片的占位色应不同');
     });
   });
 

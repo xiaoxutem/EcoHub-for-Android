@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../common/app_theme.dart';
-import '../utils/format_util.dart';
 import 'app_icon.dart';
+import 'resilient_image.dart';
 
 /// 「我的」页站点卡：Logo / 软件源 / 收藏|历史，对齐 OHOS `ProfileTab` 站点卡
 class ProfileSiteCard extends StatelessWidget {
@@ -27,13 +26,13 @@ class ProfileSiteCard extends StatelessWidget {
     if (logoUrl.isEmpty) return const StartIconImage();
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-      child: CachedNetworkImage(
-        imageUrl: logoUrl,
-        httpHeaders: FormatUtil.imageHeaders(logoUrl),
+      child: SizedBox(
         width: 56,
         height: 56,
-        fit: BoxFit.cover,
-        errorWidget: (context, url, error) => const StartIconImage(),
+        child: ResilientNetworkImage(
+          urls: [logoUrl],
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../common/app_theme.dart';
 import '../models/film_models.dart';
 import '../utils/format_util.dart';
 import '../utils/nav_util.dart';
-import '../utils/server_config_manager.dart';
 import '../utils/favorite_manager.dart';
 import 'focus_wrap.dart';
+import 'resilient_image.dart';
 
 /// 影片海报卡片组件
 class FilmCard extends StatelessWidget {
@@ -23,9 +22,12 @@ class FilmCard extends StatelessWidget {
     this.onClickCard,
   });
 
-  String _resolvedPosterUrl() {
-    final raw = FormatUtil.poster(film);
-    return ServerConfigManager.instance.resolveMediaUrl(raw);
+  /// 封面的候选地址列表，按优先级排列。
+  ///
+  /// 部分图床会对特定网络环境返回 403，单一地址失败会导致整个卡片空白；
+  /// 列出多个候选供 [ResilientNetworkImage] 依次回退。
+  List<String> _posterUrls() {
+    return FormatUtil.posterCandidates(film);
   }
 
   void _handleClick(BuildContext context) {
@@ -96,10 +98,14 @@ class FilmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final posterUrl = _resolvedPosterUrl();
+    final posterUrls = _posterUrls();
 
     // TV：InkWell 自身可聚焦，但需要明显的焦点高亮框，遥控器下才看得出选中项
-    final card = InkWell(
+    // RepaintBoundary：把每张卡片的重绘范围隔离起来 ——
+    // 否则列表滚动时任一卡片的状态变化（收藏标记、焦点框）都会触发整行重绘，
+    // 在电视上表现为明显卡顿。
+    final card = RepaintBoundary(
+      child: InkWell(
       onTap: () => _handleClick(context),
       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: LayoutBuilder(
@@ -116,18 +122,12 @@ class FilmCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (posterUrl.isNotEmpty)
-                    CachedNetworkImage(
-                      imageUrl: posterUrl,
-                      httpHeaders: FormatUtil.imageHeaders(posterUrl),
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const ColoredBox(
-                        color: AppTheme.bgCard,
-                      ),
-                      errorWidget: (context, url, error) => _buildPlaceholder(),
-                    )
-                  else
-                    _buildPlaceholder(),
+                  ResilientNetworkImage(
+                    urls: posterUrls,
+                    fallbackName: film.name,
+                    fit: BoxFit.cover,
+                    backgroundColor: AppTheme.bgCard,
+                  ),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -218,6 +218,7 @@ class FilmCard extends StatelessWidget {
 
           return cardWidth != null ? SizedBox(width: cardWidth, child: card) : card;
         },
+        ),
       ),
     );
 
@@ -227,19 +228,4 @@ class FilmCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPlaceholder() {
-    return Container(
-      color: AppTheme.bgCard,
-      child: Center(
-        child: Text(
-          film.name.isNotEmpty ? film.name.substring(0, 1) : '影',
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
 }

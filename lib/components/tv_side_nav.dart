@@ -86,7 +86,6 @@ class _NavItem extends StatelessWidget {
     return FocusTap(
       onTap: onTap,
       focusRadius: BorderRadius.circular(AppTheme.radiusMd),
-      focusScaleEnabled: false,
       child: Container(
         width: TvMode.scale(80),
         padding: EdgeInsets.symmetric(vertical: TvMode.scale(10)),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../common/app_theme.dart';
 import '../models/film_models.dart';
 import '../utils/format_util.dart';
@@ -7,6 +6,7 @@ import '../utils/nav_util.dart';
 import '../utils/server_config_manager.dart';
 import '../utils/favorite_manager.dart';
 import 'focus_wrap.dart';
+import 'resilient_image.dart';
 
 /// 搜索结果横向图文卡片组件
 class SearchResultItem extends StatelessWidget {
@@ -90,16 +90,12 @@ class SearchResultItem extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (posterUrl.isNotEmpty)
-                      CachedNetworkImage(
-                        imageUrl: posterUrl,
-                        httpHeaders: FormatUtil.imageHeaders(posterUrl),
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(color: AppTheme.bgCard),
-                        errorWidget: (context, url, error) => _buildPlaceholder(),
-                      )
-                    else
-                      _buildPlaceholder(),
+                    ResilientNetworkImage(
+                      urls: posterUrl.isEmpty ? const [] : [posterUrl],
+                      fallbackName: film.name,
+                      fit: BoxFit.cover,
+                      backgroundColor: AppTheme.bgCard,
+                    ),
                     Center(
                       child: Container(
                         width: 28,
@@ -197,25 +193,14 @@ class SearchResultItem extends StatelessWidget {
       ),
     );
 
-    return FocusHighlight(
-      radius: BorderRadius.circular(AppTheme.radiusMd),
-      child: item,
-    );
-  }
-
-  Widget _buildPlaceholder() {
-    return Container(
-      color: AppTheme.bgCard,
-      child: Center(
-        child: Text(
-          film.name.isNotEmpty ? film.name.substring(0, 1) : '影',
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textSecondary,
-          ),
-        ),
+    // RepaintBoundary：隔离单个搜索结果项的重绘范围，
+    // 避免列表滚动时整页重绘。
+    return RepaintBoundary(
+      child: FocusHighlight(
+        radius: BorderRadius.circular(AppTheme.radiusMd),
+        child: item,
       ),
     );
   }
+
 }

@@ -42,6 +42,24 @@
 | `lib/components/focus_wrap.dart` | `FocusTap`（可聚焦点击容器）/ `FocusHighlight`（焦点高亮） |
 | `lib/components/player/player_dpad_controller.dart` | 播放器 D-pad 控制（进度 / 音量 / 播放暂停） |
 | `lib/components/tv_side_nav.dart` | TV 左侧竖排导航 |
+| `lib/components/resilient_image.dart` | 封面多地址回退 + 首字占位图 |
+| `lib/utils/image_cache_manager.dart` | 全局图片缓存与解码尺寸限制 |
+
+### 性能与体验优化
+
+- **图片缓存**：全局 `CacheManager`（200 张 / 30 天），避免重复下载。
+- **按显示尺寸解码**：`memCacheWidth` 限制解码宽度（原图 500~1000px → 按卡片实际宽度解码），
+  显著降低内存峰值与解码耗时。
+- **重绘隔离**：卡片加 `RepaintBoundary`，列表滚动时不再整页重绘。
+- **隐藏页停摆**：非当前 Tab 用 `TickerMode(enabled: false)` 停掉轮播定时器与动画。
+- **封面容错**：图床返回 403/404 时按候选地址依次回退，全部失败则显示带首字的占位图，
+  不再出现「一片空白」。
+
+### 已知限制
+
+部分图床（如 `image.jinyingimage.com`）会对特定网络环境返回 **403**（服务端 WAF 按 IP 段拦截）。
+这是**源站/图床侧**的限制，客户端无法绕过 —— 此时会显示带影片首字的彩色占位图。
+如需彻底解决，需由源站提供图片代理接口。
 
 ---
 
