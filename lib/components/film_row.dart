@@ -109,9 +109,11 @@ class FilmRow extends StatelessWidget {
               children: [
                 if (showTitle)
                   Expanded(
-                  child: FocusTap(
-                    onTap: () => _openMore(context),
-                    focusRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  // 标题**只作展示，不可聚焦、不可点击** ——
+                  // 进入该分类的入口是右侧的「查看全部」。
+                  // 如果标题也能点，遥控器在两处都能进同一个页面，
+                  // 焦点路径会变得不可预测。
+                  child: IgnorePointer(
                     child: Row(
                       children: [
                         Container(

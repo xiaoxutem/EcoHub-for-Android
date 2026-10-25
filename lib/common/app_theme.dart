@@ -53,6 +53,16 @@ class AppTheme {
         surface: bgElevated,
         error: danger,
       ),
+      // ★ 电视上 Material 控件的焦点高亮（InkWell / IconButton / TextButton /
+      // Switch / Checkbox …）默认是几乎看不见的半透明灰 ——
+      // 统一改成橙色，遥控器选中什么一眼就看得见。
+      //
+      // 这比「给每个控件套 FocusHighlight」更彻底：
+      // Theme 一改，所有 Material 控件的焦点态立刻生效，零遗漏。
+      focusColor: accent.withValues(alpha: 0.30),
+      hoverColor: accent.withValues(alpha: 0.18),
+      splashColor: accent.withValues(alpha: 0.22),
+      highlightColor: accent.withValues(alpha: 0.30),
       appBarTheme: const AppBarTheme(
         backgroundColor: bg,
         elevation: 0,

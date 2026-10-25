@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'common/app_theme.dart';
-import 'components/tv_focus_overlay.dart';
 import 'utils/app_orientation.dart';
 import 'utils/source_guard.dart';
 import 'utils/tv_mode.dart';
@@ -236,6 +235,19 @@ class _EcoHubAppState extends State<EcoHubApp> with WidgetsBindingObserver {
   Widget _buildRoot(Widget child, MediaQueryData mediaQuery) {
     if (!TvMode.isTvActive) return child;
 
+    // 电视上焦点高亮必须**常亮**，而且要「传统」样式（焦点框），
+    // 不是「触摸」样式（只在按下时闪一下）。
+    //
+    // Flutter 默认是 `automatic`：按最后一次输入类型切换 ——
+    // 触摸过就变成 `touch`（按下时才显示），否则 `traditional`。
+    // Android TV 上默认落到 `touch` 分支，
+    // 于是 Material 控件（InkWell / IconButton / Switch…）的焦点高亮
+    // **几乎看不见** —— 遥控器选中了什么完全看不出来。
+    //
+    // `alwaysTraditional` = 永远显示传统焦点框。
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+
     return FocusTraversalGroup(
       // 阅读顺序策略：在网格/列表里按行优先的方向键遍历，与视觉排布一致，
       // 避免使用 OrderedTraversalPolicy 时因缺少显式 order 而无法移动焦点。
@@ -250,13 +262,14 @@ class _EcoHubAppState extends State<EcoHubApp> with WidgetsBindingObserver {
         },
         child: Focus(
           autofocus: true,
-          // 全局焦点框层：监听焦点节点并在顶层画橙色描边。
+          // 焦点高亮交给 Flutter 官方机制：
+          // 框画在**控件自己的子树里**，天然精确跟随，绝不会与真实焦点错位。
           //
-          // 为什么放在最外层：Material 自带控件的默认焦点高亮在电视上
-          // 几乎不可见，逐个用 FocusHighlight 包裹永远补不干净
-          // （关于页、收藏页、历史页、详情弹窗、错误页、投屏面板…都漏过）。
-          // 在应用顶层统一绘制，任何能获得焦点的控件都会自动带上高亮框。
-          child: TvFocusOverlay(child: child),
+          // 配合上面 `highlightStrategy = alwaysTraditional`
+          // 与 `Theme.focusColor`（橙色），
+          // 所有 Material 控件（InkWell / IconButton / Switch…）的焦点态
+          // 都会清晰可见。
+          child: child,
         ),
       ),
     );

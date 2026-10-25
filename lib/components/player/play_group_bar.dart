@@ -119,6 +119,9 @@ class PlayGroupBar extends StatelessWidget {
       bridge: focusBridge,
       zone: 'player_line',
       index: index,
+      // 焦点只落在本节点上（InkWell 内部节点不参与），
+      // 高亮框精确贴合 chip，方向键也必定经过这里的处理器。
+      descendantsAreFocusable: false,
       // → 直接跳到 Tab 行右上角那个「全屏」按钮
       // （它在固定位置、不会被横向滚动裁掉，始终可见可聚焦）。
       rightZone: 'player_fullscreen',
@@ -171,6 +174,8 @@ class PlayGroupBar extends StatelessWidget {
       bridge: focusBridge,
       zone: 'player_group',
       index: index,
+      // 同上：焦点只落在本节点上。
+      descendantsAreFocusable: false,
       // ↑ 跳到侧栏右上角的「全屏」按钮。
       //
       // 为什么不是直接跳 HUD：分组 chip 在**横向 SingleChildScrollView** 里，

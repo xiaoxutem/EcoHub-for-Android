@@ -75,6 +75,23 @@ class TvFocusItem extends StatefulWidget {
   /// 点击的命中行为。
   final HitTestBehavior behavior;
 
+  /// 子树内的控件是否还能获得焦点。
+  ///
+  /// ## 为什么要这个开关
+  ///
+  /// `InkWell` / `IconButton` / `TextButton` **内部自带焦点节点**，
+  /// 而且它比外层包装的 [Focus] 更深 —— 焦点会落到它内部去。
+  ///
+  /// 后果有两个：
+  /// 1. 焦点高亮画在**内部节点**上（框会偏小 / 位置不对）；
+  /// 2. 本组件的 `onKeyEvent` 收不到方向键（事件先被更深的节点处理，
+  ///    或者被外层 `Scrollable` 消费去滚动）——
+  ///    于是登记的跨区域跳转目标形同虚设。
+  ///
+  /// 设成 false：焦点只能落在本组件的节点上，
+  /// 高亮框精确贴合控件，方向键也必定经过本组件的处理器。
+  final bool descendantsAreFocusable;
+
   /// 是否绘制焦点高亮框。
   ///
   /// 容器型用法（只是包一层做按键拦截）应设为 false ——
@@ -109,6 +126,7 @@ class TvFocusItem extends StatefulWidget {
     this.behavior = HitTestBehavior.deferToChild,
     this.onFocusUp,
     this.showHighlight = true,
+    this.descendantsAreFocusable = true,
   });
 
   @override
@@ -242,6 +260,7 @@ class _TvFocusItemState extends State<TvFocusItem> {
     return Focus(
       focusNode: _node,
       canRequestFocus: widget.canRequestFocus,
+      descendantsAreFocusable: widget.descendantsAreFocusable,
       onKeyEvent: _handleKey,
       child: widget.showHighlight
           ? FocusHighlight(

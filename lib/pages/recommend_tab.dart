@@ -372,9 +372,10 @@ class _RecommendTabState extends State<RecommendTab> {
                 final movies = section.movies.isNotEmpty ? section.movies : section.hot;
                 return FilmRow(
                   title: section.nav.name,
-                  // 推荐页顶部已有分类标签行（已按需隐藏），
-                  // 区块标题重复且挤占空间 —— 纯卡片流更清爽。
-                  showTitle: false,
+                  // 区块标题**保留显示**（电影片 / 连续剧 …），
+                  // 但不可聚焦、不可点击 —— 进入该分类的入口是右侧「查看全部」。
+                  // 标题若也能点，遥控器在两处都能进同一页面，焦点路径会变得不可预测。
+                  showTitle: true,
                   films: movies,
                   pid: section.nav.id,
                   leftInset: leftInset,
