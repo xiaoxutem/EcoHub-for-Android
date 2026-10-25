@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../utils/format_util.dart';
 import '../utils/image_cache_manager.dart';
+import '../utils/image_host_guard.dart';
+import '../utils/image_proxy_config.dart';
 
 /// 支持多候选地址回退的网络图片。
 ///
@@ -51,17 +53,48 @@ class _ResilientNetworkImageState extends State<ResilientNetworkImage> {
     }
   }
 
+  /// 找到下一个**未被熔断**的候选地址下标；没有则返回 null。
+  int? _nextUsableUrl() {
+    for (var i = _index + 1; i < widget.urls.length; i++) {
+      if (!ImageHostGuard.instance.shouldSkip(widget.urls[i])) return i;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.urls.isEmpty) {
       return PosterFallback(name: widget.fallbackName);
     }
     final url = widget.urls[_index.clamp(0, widget.urls.length - 1)];
+
+    // 配置了图片代理时，所有地址都走代理（代理服务器能访问被封的图床）。
+    final proxy = ImageProxyConfig.instance;
+    final useProxy = proxy.shouldProxy(url);
+    final requestUrl = useProxy ? proxy.resolve(url) : url;
+
+    // 已知不可用的图床：直接走占位图，**不发起网络请求**。
+    // 首页有 200+ 张卡片指向被封图床，逐个请求会浪费带宽、拖慢首屏，
+    // 还会因失败回调触发整卡重绘 —— 这是「推荐页卡」的主因。
+    // （配置了代理时不熔断 —— 代理能取到图。）
+    if (!useProxy && ImageHostGuard.instance.shouldSkip(url)) {
+      // 尝试下一个候选地址；全部被封则显示占位图。
+      final next = _nextUsableUrl();
+      if (next != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() => _index = next);
+        });
+      }
+      return PosterFallback(name: widget.fallbackName);
+    }
+
     return ImageCacheManager.instance.image(
-      url: url,
+      url: requestUrl,
       fit: widget.fit,
       memCacheWidth: widget.decodeWidth,
-      headers: FormatUtil.imageHeaders(url),
+      // 走代理时不需要原图床的防盗链头。
+      headers: useProxy ? const {} : FormatUtil.imageHeaders(url),
       placeholder: PosterFallback(
         name: widget.fallbackName,
         dimmed: true,

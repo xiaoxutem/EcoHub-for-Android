@@ -7,6 +7,7 @@ import '../utils/source_guard.dart';
 import '../utils/app_version_util.dart';
 import '../utils/nav_util.dart';
 import '../components/profile_site_card.dart';
+import '../components/focus_wrap.dart';
 
 /// 我的 Tab，对齐 OHOS `ProfileTab.ets`
 class ProfileTab extends StatefulWidget {
@@ -117,7 +118,11 @@ class _ProfileTabState extends State<ProfileTab> {
     bool extraHighlight = false,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    // TV：InkWell 自身可聚焦但默认高亮很弱，用 FocusHighlight 补明显的焦点框，
+    // 否则用户在「我的」页看不到当前选中了哪一项。
+    return FocusHighlight(
+      radius: BorderRadius.circular(AppTheme.radiusSm),
+      child: InkWell(
       onTap: onTap,
       child: Container(
         height: 56,
@@ -176,6 +181,7 @@ class _ProfileTabState extends State<ProfileTab> {
               ),
             const Icon(Icons.chevron_right_rounded, size: 14, color: AppTheme.textMuted),
           ],
+        ),
         ),
       ),
     );

@@ -432,16 +432,21 @@ class _RecommendTabState extends State<RecommendTab> {
           : (_banners.isEmpty ? (48 + topInset + 12) : 0.0);
       body = _wrapRefresh(
         topInset: topInset,
-        child: SingleChildScrollView(
+        // 用 CustomScrollView + SliverList 让各 section **懒构建**。
+        // 原先的 SingleChildScrollView + Column 会一次性构建全部 8 个 section
+        // （每行 14 张卡 → 200+ 张 FilmCard 同时挂载），是首屏卡顿的重要原因。
+        child: CustomScrollView(
           controller: _scrollController,
           physics: _verticalPhysics,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (topSpace > 0) SizedBox(height: topSpace),
-              HomeBanner(key: ValueKey(_reloadToken), banners: _banners),
-              if (sections.isNotEmpty)
-                Padding(
+          slivers: [
+            if (topSpace > 0)
+              SliverToBoxAdapter(child: SizedBox(height: topSpace)),
+            SliverToBoxAdapter(
+              child: HomeBanner(key: ValueKey(_reloadToken), banners: _banners),
+            ),
+            if (sections.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
                   padding: EdgeInsets.only(bottom: wide ? 14 : AppTheme.spaceLg),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -454,7 +459,11 @@ class _RecommendTabState extends State<RecommendTab> {
                     ),
                   ),
                 ),
-              ...sections.map((section) {
+              ),
+            SliverList.builder(
+              itemCount: sections.length,
+              itemBuilder: (context, index) {
+                final section = sections[index];
                 final movies = section.movies.isNotEmpty ? section.movies : section.hot;
                 return FilmRow(
                   title: section.nav.name,
@@ -464,10 +473,10 @@ class _RecommendTabState extends State<RecommendTab> {
                   rightInset: rightInset,
                   onMore: () => _openFilter(section.nav.id),
                 );
-              }),
-              const SizedBox(height: AppTheme.spaceSm),
-            ],
-          ),
+              },
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: AppTheme.spaceSm)),
+          ],
         ),
       );
     }

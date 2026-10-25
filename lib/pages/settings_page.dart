@@ -3,6 +3,8 @@ import '../common/app_theme.dart';
 import '../components/page_header.dart';
 import '../utils/app_settings_manager.dart';
 import '../utils/tv_mode.dart';
+import '../utils/image_proxy_config.dart';
+import '../components/focus_wrap.dart';
 
 /// 设置页面，全量对齐 OHOS `SettingsPage.ets`
 class SettingsPage extends StatefulWidget {
@@ -16,10 +18,60 @@ class _SettingsPageState extends State<SettingsPage> {
   /// TV 模式开关的状态（供 ValueListenableBuilder 监听）。
   final ValueNotifier<bool> _tvModeNotifier = ValueNotifier<bool>(false);
 
+  /// 图片代理前缀输入框。
+  final TextEditingController _proxyController = TextEditingController();
+
   @override
   void dispose() {
     _tvModeNotifier.dispose();
+    _proxyController.dispose();
     super.dispose();
+  }
+
+  Widget _proxyActionButton(String label, Future<void> Function() onTap) {
+    return FocusTap(
+      onTap: onTap,
+      focusRadius: BorderRadius.circular(AppTheme.radiusMd),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+        decoration: BoxDecoration(
+          color: AppTheme.accentSoft,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.accent,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveProxy(String? _) async {
+    final value = _proxyController.text.trim();
+    await ImageProxyConfig.instance.setPrefix(value);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(value.isEmpty ? '已关闭图片代理' : '图片代理已保存，刷新页面后生效'),
+        duration: const Duration(milliseconds: 1800),
+      ),
+    );
+  }
+
+  Future<void> _clearProxy() async {
+    _proxyController.clear();
+    await ImageProxyConfig.instance.setPrefix('');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('已关闭图片代理'),
+        duration: Duration(milliseconds: 1800),
+      ),
+    );
   }
 
   Future<void> _setTvMode(bool value) async {
@@ -40,6 +92,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _tvModeNotifier.value = TvMode.forceTv;
+    _proxyController.text = ImageProxyConfig.instance.prefix;
     _refreshCacheSize();
   }
 
@@ -307,6 +360,79 @@ class _SettingsPageState extends State<SettingsPage> {
                                 onChanged: (v) => _setTvMode(v),
                               );
                             },
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // 1.6 图片代理 —— 部分图床对特定网络返回 403，
+                        // 配置一个能访问该图床的代理前缀即可显示原始封面。
+                        _sectionTitle('图片代理'),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppTheme.bgElevated,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              width: 0.5,
+                            ),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '代理前缀',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  '部分图床对当前网络返回 403（防盗链限制），'
+                                  '配置代理前缀后由代理服务器取图。留空则使用原地址。',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    height: 1.4,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  controller: _proxyController,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    hintText: 'https://your-proxy/api/img?url=',
+                                    hintStyle: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppTheme.textMuted,
+                                    ),
+                                    filled: true,
+                                    fillColor: AppTheme.bg,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                  onSubmitted: (v) => _saveProxy(v),
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    _proxyActionButton('保存', () => _saveProxy(null)),
+                                    const SizedBox(width: 8),
+                                    _proxyActionButton('清除', () => _clearProxy()),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 14),

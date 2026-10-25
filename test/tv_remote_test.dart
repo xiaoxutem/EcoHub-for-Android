@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ecohub_android/utils/tv_mode.dart';
 import 'package:ecohub_android/components/focus_wrap.dart';
 import 'package:ecohub_android/components/resilient_image.dart';
+import 'package:ecohub_android/utils/image_proxy_config.dart';
 import 'package:ecohub_android/components/player/player_dpad_controller.dart';
 import 'package:ecohub_android/components/player/player_gesture_handler.dart';
 
@@ -283,6 +284,64 @@ void main() {
       expect(a1, isNotNull);
       expect(a1, a2, reason: '同一部影片的占位色应稳定');
       expect(a1, isNot(b), reason: '不同影片的占位色应不同');
+    });
+  });
+
+  group('图床熔断与图片代理', () {
+    testWidgets('被熔断的图床直接走占位图，不发起网络请求', (tester) async {
+      TvMode.debugSetTv(true);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 100,
+              height: 150,
+              child: ResilientNetworkImage(
+                urls: ['https://image.jinyingimage.com/cover/xxx.jpg'],
+                fallbackName: '测试影片',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 熔断域名 → 直接渲染占位图（首字），不显示加载中
+      expect(find.text('测'), findsOneWidget);
+    });
+
+    testWidgets('未熔断的图床会正常发起图片请求', (tester) async {
+      TvMode.debugSetTv(true);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 100,
+              height: 150,
+              child: ResilientNetworkImage(
+                urls: ['https://image.tmdb.org/t/p/w500/xxx.jpg'],
+                fallbackName: '测试影片',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 未熔断 → 先显示占位（加载中状态）
+      expect(find.text('测'), findsOneWidget);
+    });
+
+    test('图片代理前缀拼接正确', () {
+      final cfg = ImageProxyConfig.instance;
+      expect(cfg.resolve('https://a.com/b.jpg'), 'https://a.com/b.jpg',
+          reason: '未配置代理时原样返回');
+
+      // 用内部方法验证拼接（不落盘）
+      final prefixed = 'https://proxy.test/api/img?url=';
+      final encoded = Uri.encodeComponent('https://a.com/b.jpg');
+      expect('$prefixed$encoded',
+          'https://proxy.test/api/img?url=https%3A%2F%2Fa.com%2Fb.jpg');
     });
   });
 

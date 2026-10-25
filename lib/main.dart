@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'common/app_theme.dart';
 import 'utils/app_orientation.dart';
 import 'utils/source_guard.dart';
 import 'utils/tv_mode.dart';
+import 'utils/image_host_guard.dart';
+import 'utils/image_proxy_config.dart';
 import 'pages/splash_page.dart';
+import 'utils/net_probe.dart';
 import 'pages/main_scaffold_page.dart';
 import 'pages/server_config_page.dart';
 import 'pages/filter_page.dart';
@@ -43,6 +47,21 @@ void main() async {
   // 探测设备形态（Android TV / 遥控器模式），需在首帧前完成，
   // 否则布局与焦点策略会先按手机形态渲染一次再跳变。
   await TvMode.probe();
+
+  // 探测图床可用性：不可用的图床会被熔断，后续图片直接走占位图，
+  // 避免首页 200+ 张卡片发起注定失败的请求（这是首屏卡顿的主因）。
+  ImageHostGuard.instance.init();
+  await ImageProxyConfig.instance.init();
+  unawaited(runNetworkProbe().then((lines) {
+    for (final line in lines) {
+      // 形如 "403 len=23682  image.jinyingimage.com"
+      final parts = line.split(RegExp(r'\s+'));
+      if (parts.length < 3) continue;
+      final host = parts.last;
+      final ok = parts.first == '200';
+      ImageHostGuard.instance.recordProbe(host, ok);
+    }
+  }));
 
   // TV 模式强制焦点高亮模式为 traditional。
   // Android 默认是 touch 模式 —— 首次硬件按键前不显示任何焦点高亮，
