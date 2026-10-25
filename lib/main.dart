@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'common/app_theme.dart';
+import 'components/tv_focus_overlay.dart';
 import 'utils/app_orientation.dart';
 import 'utils/source_guard.dart';
 import 'utils/tv_mode.dart';
@@ -249,7 +250,13 @@ class _EcoHubAppState extends State<EcoHubApp> with WidgetsBindingObserver {
         },
         child: Focus(
           autofocus: true,
-          child: child,
+          // 全局焦点框层：监听焦点节点并在顶层画橙色描边。
+          //
+          // 为什么放在最外层：Material 自带控件的默认焦点高亮在电视上
+          // 几乎不可见，逐个用 FocusHighlight 包裹永远补不干净
+          // （关于页、收藏页、历史页、详情弹窗、错误页、投屏面板…都漏过）。
+          // 在应用顶层统一绘制，任何能获得焦点的控件都会自动带上高亮框。
+          child: TvFocusOverlay(child: child),
         ),
       ),
     );

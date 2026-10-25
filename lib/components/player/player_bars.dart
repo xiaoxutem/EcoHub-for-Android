@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../common/app_theme.dart';
 import '../../utils/format_util.dart';
 import '../focus_wrap.dart';
+import '../tv_focus_item.dart';
 
 /// 播放器顶部控制栏（全屏模式），对齐 OHOS `PlayerSkin.topBar`
 class PlayerTopBar extends StatelessWidget {
@@ -254,12 +255,19 @@ class _PlayerBottomBarState extends State<PlayerBottomBar> {
             _buildSlider(context),
             Row(
               children: [
-                FocusHighlight(
-                  radius: BorderRadius.circular(AppTheme.radiusMd),
-                  child:                 IconButton(
-                  icon: Icon(widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 24),
-                  onPressed: widget.onTogglePlay,
-                ),
+                TvFocusItem(
+                  zone: 'player_play',
+                  index: 0,
+                  focusRadius: BorderRadius.circular(AppTheme.radiusMd),
+                  onTap: widget.onTogglePlay,
+                  child: IconButton(
+                    icon: Icon(
+                      widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                    onPressed: widget.onTogglePlay,
+                  ),
                 ),
                 Text(timeStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
                 const Spacer(),

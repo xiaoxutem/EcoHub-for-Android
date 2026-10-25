@@ -123,6 +123,13 @@ class PlayGroupBar extends StatelessWidget {
       // （它在固定位置、不会被横向滚动裁掉，始终可见可聚焦）。
       rightZone: 'player_fullscreen',
       rightIndex: 0,
+      // ↑ 直接跳到播放器 HUD 的第一个按钮（返回键）。
+      //
+      // 必须显式指定：线路 chip 在**横向 SingleChildScrollView** 里，
+      // Flutter 的 Scrollable 会先消费方向键做滚动 ——
+      // 只要右边还有 chip，↑ 就被吃掉，焦点永远出不了这一行。
+      upZone: 'player_hud',
+      upIndex: 0,
       focusRadius: BorderRadius.circular(AppTheme.radiusPill),
       onTap: () => onViewSource?.call(source.id),
       child: chip,

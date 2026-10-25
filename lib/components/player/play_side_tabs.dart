@@ -88,6 +88,9 @@ class PlaySideTabs extends StatelessWidget {
       index: index,
       rightZone: 'player_fullscreen',
       rightIndex: 0,
+      // ↑ 跳到播放器 HUD（返回 / 投屏 / 画中画 / 全屏）。
+      upZone: 'player_hud',
+      upIndex: 0,
       behavior: HitTestBehavior.opaque,
       focusRadius: BorderRadius.circular(AppTheme.radiusSm),
       onTap: () => onTabChange(index),

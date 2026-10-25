@@ -181,7 +181,11 @@ class _RecommendTabState extends State<RecommendTab> {
         index: index,
         downZone: _zoneRow,
         downIndex: index,
-        upZone: _zoneCategory,
+        // ↑ 不设跨区域目标：分类项上方是搜索框 / 轮播图，
+        // 交给 Flutter 默认的几何遍历更自然。
+        //
+        // （之前误设成 upZone: _zoneCategory —— 指回自己，
+        //  按 ↑ 会在分类项之间原地打转，表现就是「焦点乱跳」。）
         focusRadius: BorderRadius.circular(AppTheme.radiusPill),
         child: Material(
           color: Colors.transparent,

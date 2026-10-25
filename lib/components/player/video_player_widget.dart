@@ -86,6 +86,9 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   /// 选中 scope 内的**第一个**可聚焦元素（返回键），
   /// 之后用户用 → 就能依次走到全屏按钮。
   final FocusScopeNode _hudFocusScope = FocusScopeNode(debugLabel: 'playerHud');
+
+  /// 上一次控制条是否处于显示状态（用于检测「刚显示」）。
+  bool _lastControlsShown = false;
   final PlayerPlaybackController _playback = PlayerPlaybackController();
   final PlayerCastController _castCtrl = PlayerCastController();
   late final PlayerPipCoordinator _pipCoord;
@@ -175,6 +178,51 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     if (oldWidget.hasPrev != widget.hasPrev || oldWidget.hasNext != widget.hasNext) {
       _syncAutoPip();
     }
+    _maybeFocusControls();
+  }
+
+  /// 控制条刚出现时（非全屏）把焦点送到播放 / 暂停按钮。
+  ///
+  /// 对齐 React Native TV 版的 `hasTVPreferredFocus` 行为：
+  /// 控制条一显示，遥控器就能直接操作它。
+  void _maybeFocusControls() {
+    final shown = _playback.showHud;
+    final justShown = shown && !_lastControlsShown;
+    _lastControlsShown = shown;
+    if (!justShown) return;
+    if (widget.isFull) return; // 全屏下方向键用于音量 / 快进，焦点留在画面上
+    // 焦点已经在别处（比如用户正在操作侧栏）就不抢。
+    if (FocusManager.instance.primaryFocus != null) return;
+    focusPlayButton();
+  }
+
+  /// HUD 控制条出现时，把焦点送到**播放 / 暂停**按钮。
+  ///
+  /// ## 为什么
+  ///
+  /// 播放器的 HUD 在**左侧视频区**，侧栏在右侧，两者几何上不重叠 ——
+  /// 遥控器方向键在侧栏里走不到 HUD，焦点永远到不了全屏按钮。
+  ///
+  /// 参考 React Native TV 版（`PangHuTV-for-Android` 的 `feat/rn-tv` 分支）
+  /// 的做法：它用 `hasTVPreferredFocus={showControls}` ——
+  /// **控制条一显示，焦点就自动落到控制条上**。
+  ///
+  /// 这里选「播放 / 暂停」而不是「返回」：
+  /// 焦点落在返回键上时，用户按 OK 想暂停反而会退出播放页。
+  void focusPlayButton() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final bridge = TvFocusScope.maybeOf(context);
+      final node = bridge?.nodeOf('player_play', 0);
+      if (node != null && node.canRequestFocus) {
+        node.requestFocus();
+        return;
+      }
+      // 兜底：底栏没渲染出来时，退到 HUD 的第一个按钮。
+      final hud = bridge?.nodeOf('player_hud', 0);
+      hud?.requestFocus();
+    });
   }
 
   /// 把焦点移进 HUD 作用域（选中 scope 内第一个可聚焦元素）。

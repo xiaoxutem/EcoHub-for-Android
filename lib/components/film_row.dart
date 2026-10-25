@@ -185,7 +185,6 @@ class FilmRow extends StatelessWidget {
                   //   分类项 i ↓ → 本行第 1 张卡
                   //   本行第 1 张卡 ↑ → 上一行第 1 张卡（第 1 行则回到分类项 i）
                   //   本行任意卡 ↓ → 下一行第 1 张卡
-                  final isFirst = index == 0;
                   final prevRowFirst = (focusIndex - 1) * 1000;
                   return TvFocusItem(
                     bridge: focusBridge,
@@ -194,11 +193,18 @@ class FilmRow extends StatelessWidget {
                     // ↓ → 下一行的第一张卡
                     downZone: focusZone,
                     downIndex: (focusIndex + 1) * 1000,
-                    // ↑ → 上一行的第一张卡；第一行则回到分类标题项
-                    upZone: isFirst
-                        ? (focusIndex > 0 ? focusZone : focusUpZone)
-                        : focusZone,
-                    upIndex: isFirst ? prevRowFirst : focusUpIndex,
+                    // ↑ → **上一行的同一列**（严格列对齐）。
+                    //
+                    // 之前非首张卡写的是 upZone: focusZone + upIndex: focusUpIndex
+                    // —— upIndex 传的是**行号**，结果从第 3 张卡按 ↑
+                    // 会跳到「另一行的第 1 张卡」，这就是焦点乱跳的来源。
+                    //
+                    // 现在：行 i 的第 j 张卡 ↑ → 行 i-1 的第 j 张卡；
+                    // 第 0 行则回到分类标题项（按下标对齐，超出则取最后一个）。
+                    upZone: focusIndex > 0 ? focusZone : focusUpZone,
+                    upIndex: focusIndex > 0
+                        ? prevRowFirst + index
+                        : (focusUpIndex > 0 ? focusUpIndex : 0),
                     focusRadius: BorderRadius.circular(AppTheme.radiusMd),
                     child: card,
                   );

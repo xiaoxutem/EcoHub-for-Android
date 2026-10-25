@@ -220,7 +220,8 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
   Widget build(BuildContext context) {
     final showNoticeOverlay = _showNotice && _ready && _siteOpen;
     final showUpdateOverlay = _showUpdateDialog && AppVersionUtil.getCachedUpdateInfo() != null;
-    // 返回键统一由下方的 PopScope 回调处理（见该处注释）。
+    // 有全屏弹窗时，返回键先关弹窗，不 pop 路由。
+    final hasModalOverlay = showNoticeOverlay || showUpdateOverlay;
 
     // TV 端使用左侧竖排导航（Android TV 标准布局）；其余平台沿用底部导航
     final isTv = TvMode.isTvActive;
@@ -323,7 +324,7 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
       // - 有弹窗 → 关弹窗
       // - 路由栈里还有上层页面 → 正常 pop
       // - 已在根页面 → 「再按一次退出」（电视上 BACK 极易误触）
-      canPop: false,
+      canPop: !hasModalOverlay,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (showNoticeOverlay) {
@@ -338,6 +339,14 @@ class _MainScaffoldPageState extends State<MainScaffoldPage> with WidgetsBinding
           setState(() {
             _showUpdateDialog = false;
           });
+        } else if (Navigator.of(context).canPop()) {
+          // 路由栈里还有上层页面 → 正常返回。
+          //
+          // 注意：这里必须显式 pop。
+          // 曾把 canPop 设成 false 想做「再按一次退出」，
+          // 结果回调里没补上 pop —— BACK 键彻底失效，
+          // 主页按返回回不到系统桌面。
+          Navigator.of(context).pop();
         }
       },
       child: Stack(
