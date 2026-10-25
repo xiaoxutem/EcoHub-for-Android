@@ -198,7 +198,12 @@ class _TvFocusItemState extends State<TvFocusItem> {
       return KeyEventResult.handled;
     }
 
-    if (key != LogicalKeyboardKey.arrowUp && key != LogicalKeyboardKey.arrowDown) {
+    // 四个方向都可能登记了跨区域目标 —— 都要交给协调器处理。
+    // （之前只放行 ↑/↓，导致 → 被直接忽略，跨区域的 → 跳转从未生效。）
+    if (key != LogicalKeyboardKey.arrowUp &&
+        key != LogicalKeyboardKey.arrowDown &&
+        key != LogicalKeyboardKey.arrowRight &&
+        key != LogicalKeyboardKey.arrowLeft) {
       return KeyEventResult.ignored;
     }
     // 自定义回调优先（用于容器包住子元素的场景）。
@@ -206,6 +211,7 @@ class _TvFocusItemState extends State<TvFocusItem> {
     if (custom != null && key == LogicalKeyboardKey.arrowUp) {
       return custom() ? KeyEventResult.handled : KeyEventResult.ignored;
     }
+
 
     final bridge = widget.bridge ?? _scopeBridge;
     final zone = widget.zone;
