@@ -280,36 +280,40 @@ export class API {
 
   /** 站点基础配置（免登录），并同步私有化开关 */
   async getSiteBasic(): Promise<SiteBasic> {
-    // ★ 加超时：电视上这个请求可能挂住不返回（实测首页会一直停在
+    // ★ 加超时：电视上这个请求会**挂住不返回**（实测首页一直停在
     //   「正在验证服务器配置...」，整个 App 卡住不可用）。
-    //   fetch 没有默认超时，必须自己用 AbortController 兜底。
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
-    let data;
+    //
+    //   ★★ 关键：**不能用 AbortController** ——
+    //   这台电视是 Android 6，RN 底层的 OkHttp 太老，
+    //   **不支持 fetch 的 `signal` 参数** ⇒ abort 根本不生效（实测超时无效）。
+    //   所以改成 **JS 层的 Promise.race**，纯 JS 计时，不依赖 fetch 能力。
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let siteBasic: SiteBasic;
     try {
-      data = await panghuFetch(this.baseURL, "/api/config/basic", {
-        signal: controller.signal,
+      const data = await Promise.race([
+        panghuFetch(this.baseURL, "/api/config/basic"),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error("连接超时，请检查服务器地址")),
+            10000
+          );
+        }),
+      ]);
+      siteBasic = {
+        siteName: data?.siteName ?? "",
+        privateAccess: !!data?.privateAccess,
+        requireWebLogin: !!data?.requireWebLogin,
+      };
+      // privateAccess 或 requireWebLogin 任一开启，/api/hls、/api/cover 都要求登录态
+      //（播放器/Image 组件不带 Authorization，必须走 ?token=）
+      setPrivateAccess(siteBasic.privateAccess || siteBasic.requireWebLogin);
+      await setServerFlags({
+        privateAccess: siteBasic.privateAccess,
+        requireWebLogin: siteBasic.requireWebLogin,
       });
-    } catch (e: any) {
-      if (e?.name === "AbortError" || /abort/i.test(String(e?.message))) {
-        throw new Error("连接超时，请检查服务器地址");
-      }
-      throw e;
     } finally {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
     }
-    const siteBasic: SiteBasic = {
-      siteName: data?.siteName ?? "",
-      privateAccess: !!data?.privateAccess,
-      requireWebLogin: !!data?.requireWebLogin,
-    };
-    // privateAccess 或 requireWebLogin 任一开启，/api/hls、/api/cover 都要求登录态
-    //（播放器/Image 组件不带 Authorization，必须走 ?token=）
-    setPrivateAccess(siteBasic.privateAccess || siteBasic.requireWebLogin);
-    await setServerFlags({
-      privateAccess: siteBasic.privateAccess,
-      requireWebLogin: siteBasic.requireWebLogin,
-    });
     return siteBasic;
   }
 

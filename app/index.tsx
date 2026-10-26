@@ -424,7 +424,18 @@ export default function HomeScreen() {
             {getApiConfigErrorMessage(apiConfigStatus)}
           </ThemedText>
         </View>
-      ) : apiConfigStatus.isValidating ? (
+      ) : false ? (
+        /* ★ 这里原本是 `apiConfigStatus.isValidating` 分支（显示「正在验证服务器配置...」）。
+         *
+         *   实测在这台电视（VIDAA / Android 6）上，首页会**一直**停在这个转圈上，
+         *   整个 App 看起来就是「卡死」—— 而根因是验证链路上**任何一环**的 await
+         *   收不到终态（AsyncStorage / fetch / 服务端配置拉取），
+         *   给每一环加超时都不够。
+         *
+         *   ⇒ 用户体验上，**宁可显示内容（可能为空/有错误提示），也不要卡在转圈**。
+         *     真正需要改服务器地址时，走右上角齿轮进设置页即可。
+         *   （验证逻辑仍在后台跑，通了就会正常刷新内容。）
+         */
         <View style={commonStyles.center}>
           <ActivityIndicator size="large" />
           <ThemedText type="subtitle" style={{ padding: spacing, textAlign: "center" }}>

@@ -52,7 +52,7 @@ const generateKey = (source: string, id: string) => `${source}+${id}`;
 export class PlayerSettingsManager {
   static async getAll(): Promise<Record<string, PlayerSettings>> {
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.PLAYER_SETTINGS);
+      const data = await getItemWithTimeout(STORAGE_KEYS.PLAYER_SETTINGS);
       return data ? JSON.parse(data) : {};
     } catch (error) {
       logger.info("Failed to get all player settings:", error);
@@ -241,6 +241,38 @@ export class SearchHistoryManager {
 }
 
 // --- SettingsManager (Uses AsyncStorage) ---
+/**
+ * 带超时的 AsyncStorage 读取。
+ *
+ * ★★ 为什么必须加超时（实测踩过的坑）：
+ *   这台电视（VIDAA / Android 6）上 **AsyncStorage.getItem 会卡住不返回**，
+ *   而它到处被 await —— 最典型的后果是
+ *   `useSettingsStore.loadSettings()` 里的 `await SettingsManager.get()`
+ *   永不 resolve → `isLoadingServerConfig` 永远 true →
+ *   `useApiConfig` 永远 `isValidating` → **首页一直停在「正在验证服务器配置...」，
+ *   整个 App 看起来就是「卡死」**（用户最初报的���题）。
+ *
+ *   ⇒ 所有 AsyncStorage 读取都必须有超时兜底，失败就用默认值。
+ */
+export async function getItemWithTimeout(
+  key: string,
+  timeoutMs = 3000
+): Promise<string | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      AsyncStorage.getItem(key),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), timeoutMs);
+      }),
+    ]);
+  } catch {
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export class SettingsManager {
   static async get(): Promise<AppSettings> {
     const defaultSettings: AppSettings = {
@@ -261,7 +293,7 @@ export class SettingsManager {
       m3uUrl: "",
     };
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.SETTINGS);
+      const data = await getItemWithTimeout(STORAGE_KEYS.SETTINGS);
       return data ? { ...defaultSettings, ...JSON.parse(data) } : defaultSettings;
     } catch (error) {
       logger.info("Failed to get settings:", error);
@@ -284,7 +316,7 @@ export class SettingsManager {
 export class LoginCredentialsManager {
   static async get(): Promise<LoginCredentials | null> {
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.LOGIN_CREDENTIALS);
+      const data = await getItemWithTimeout(STORAGE_KEYS.LOGIN_CREDENTIALS);
       return data ? JSON.parse(data) : null;
     } catch (error) {
       logger.info("Failed to get login credentials:", error);

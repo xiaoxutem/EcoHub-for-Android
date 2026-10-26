@@ -11,10 +11,40 @@ export interface ServerFlags {
 // 同步镜像：URL 构造（海报/播放地址追加 token）需要同步取 token
 let cachedToken: string | null = null;
 
+/**
+ * 读 token。
+ *
+ * ★ 为什么要加超时：
+ *   `panghuFetch` 每次请求前都要 `await getAuthToken()`，
+ *   而它读的是 AsyncStorage（原生 SQLite）。
+ *   实测在这台电视（VIDAA / Android 6）上这一步会**长时间不返回**，
+ *   导致首页一直停在「正在验证服务器配置...」，整个 App 不可用。
+ *   （AbortController 的超时信号是在 fetch 之后才挂上的，
+ *     根本管不到前面这段 await。）
+ *
+ *   ⇒ 这里给读取本身加超时，并且优先用内存缓存。
+ */
 export async function getAuthToken(): Promise<string | null> {
-  const t = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-  cachedToken = t;
-  return t;
+  // 内存缓存命中就不碰原生存储（最快，也最不容易卡）
+  if (cachedToken) {
+    return cachedToken;
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const t = await Promise.race([
+      AsyncStorage.getItem(AUTH_TOKEN_KEY),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), 3000);
+      }),
+    ]);
+    cachedToken = t ?? null;
+    return cachedToken;
+  } catch {
+    // 读失败（原生存储异常）也不能拖死整个请求
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 export function getCachedAuthToken(): string | null {

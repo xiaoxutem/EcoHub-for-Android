@@ -92,6 +92,31 @@ export const useApiConfig = () => {
     }
   }, [isLoadingServerConfig]);
 
+  // ★★ 兜底：验证最多等 15 秒，无论如何都放行。
+  //
+  //   这台电视（VIDAA / Android 6）上，实测首页会**一直**停在
+  //   「正在验证服务器配置...」，整个 App 看起来就是「卡死」——
+  //   而根因是下面这一串 await 链条里**任何一环卡住**都收不到终态：
+  //     loadSettings() → await SettingsManager.get() → AsyncStorage
+  //     loadServerConfig() → await api.getSiteBasic() → fetch
+  //   给每一环都加了超时还不够（AsyncStorage 3 秒、fetch 10 秒实测都没解决），
+  //   说明还有别的等待点。
+  //
+  //   ⇒ UI 层面加一道**硬上限**：isValidating 最多维持 15 秒，
+  //   之后强制置 false，让首页正常显示内容（配置无效也照样能进设置页改）。
+  useEffect(() => {
+    if (!validationState.isValidating) return;
+    const timer = setTimeout(() => {
+      setValidationState(prev => ({
+        ...prev,
+        isValidating: false,
+        isValid: prev.isValid ?? false,
+        error: prev.error ?? "服务器连接超时，请检查地址",
+      }));
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, [validationState.isValidating]);
+
   // Update validation state based on server config
   useEffect(() => {
     if (!isLoadingServerConfig && isConfigured) {
