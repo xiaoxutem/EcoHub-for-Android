@@ -173,6 +173,7 @@ const styles = StyleSheet.create({
   },
   settingItemFocused: {
     borderColor: Colors.dark.primary,
+    borderWidth: 2.5,
     backgroundColor: "#007AFF22",
   },
   settingInfo: {

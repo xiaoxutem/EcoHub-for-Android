@@ -210,6 +210,7 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: Colors.dark.primary,
+    borderWidth: 2.5,
     shadowColor: Colors.dark.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,

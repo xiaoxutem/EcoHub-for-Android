@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet, Alert, Platform, ScrollView, useTVEventHandler, Pressable } from "react-native";
+import { View, StyleSheet, Alert, Platform, ScrollView, useTVEventHandler, Pressable, BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
+import { Colors } from "@/constants/Colors";
+import { goBackSafely } from "@/utils/backNavigation";
 import { ThemedView } from "@/components/ThemedView";
 import { StyledButton } from "@/components/StyledButton";
 import { useThemeColor } from "@/hooks/useThemeColor";
@@ -23,7 +25,7 @@ import { DeviceUtils } from "@/utils/DeviceUtils";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SettingsFocusContext } from "@/hooks/useSettingsFocus";
 import { useSettingsFocusRegistry } from "@/hooks/useSettingsFocusRegistry";
-import { usePathname, useRouter } from "expo-router";
+import {useFocusEffect, usePathname, useRouter} from "expo-router";
 
 type SectionItem = {
   component: React.ReactElement;
@@ -347,19 +349,55 @@ export default function SettingsScreen() {
   //
   // RN TV 的 `useTVEventHandler` 依赖是 `[handleEvent]` ——
   // 每次渲染传新的函数就会重新订阅一次原生 TV 事件（原生反复调用 → 卡死）。
+  // ★ TV 上**不抢**方向键，交给原生焦点系统。
+  //
+  // 之前是用 useTVEventHandler 拦下 down/up，再靠 `focusRegistry.focusKey(key)`
+  // → 区块的 `rowRef.current.focus()` 手动移焦。
+  // 但 **RN 的 `Pressable` 是函数组件、不转发 ref** —— `rowRef.current` 永远是 null，
+  // `focus?.()` 静默失败。结果：方向键被我们拦住（原生焦点搜索失效），
+  // 自己的手动聚焦又无效 → 焦点哪都去不了 → 设置页里看不到任何焦点框。
+  //
+  // 现在方向键走原生焦点系统（各区块内部控件都带 `focusable`），
+  // 焦点落到谁由系统判定，onFocus 回调负责点亮橙色焦点框；
+  // select 事件同样交给控件自己的 onPress。
   const noopTVEventHandler = React.useCallback(() => {}, []);
-  useTVEventHandler(deviceType === "tv" ? handleTVEvent : noopTVEventHandler);
+  useTVEventHandler(noopTVEventHandler);
 
   // 进入页面把焦点放到第一项
   useEffect(() => {
     if (deviceType !== "tv" || focusReady) return;
     const timer = setTimeout(() => {
+      // ★ 不再手动调 focusKey() —— 各区块的 rowRef 挂在 Pressable 上（不支持 ref），
+      // 手动聚焦从来没生效过。现在靠原生焦点系统自动落到第一个可聚焦控件。
       focusIndexRef.current = 0;
-      focusRegistry.value.focusKey(focusOrder[0]);
       setFocusReady(true);
     }, 400);
     return () => clearTimeout(timer);
-  }, [deviceType, focusReady, focusRegistry, focusOrder]);
+  }, [deviceType, focusReady]);
+
+  // ★ 显式处理返回键。
+  //
+  // expo-router / react-navigation 在 Android TV 上的默认返回**不生效**
+  // （栈可能不可回退，且 TV 固件不会触发默认的 Activity 行为），
+  // 结果按返回键毫无反应、只能杀进程重进。
+  //
+  // 自己在页面级注册 BackHandler（后注册者优先）：
+  // 能回退就 back，不能回退就 replace 回首页 —— 保证一定能离开设置页。
+  const goBack = React.useCallback(() => {
+    goBackSafely(router);
+  }, [router]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (Platform.OS !== "android") return;
+      const onBack = () => {
+        goBack();
+        return true;
+      };
+      const sub = BackHandler.addEventListener("hardwareBackPress", onBack);
+      return () => sub.remove();
+    }, [goBack])
+  );
 
   // 动态样式
   const dynamicStyles = createResponsiveStyles(deviceType, spacing, insets);
@@ -378,6 +416,16 @@ export default function SettingsScreen() {
       <ThemedView style={[commonStyles.container, dynamicStyles.container]}>
         {deviceType === "tv" && (
           <View style={dynamicStyles.header}>
+            {/* ★ 可见的返回按钮 ——
+                TV 上「按返回键」用户不一定知道，一个能点的返回更直观；
+                它同时也是焦点系统里的第一个可聚焦控件，进入页面时焦点会落在它身上。 */}
+            <Pressable
+              style={dynamicStyles.backButton}
+              focusable
+              onPress={goBack}
+            >
+              <ThemedText style={dynamicStyles.backButtonText}>‹ 返回</ThemedText>
+            </Pressable>
             <ThemedText style={dynamicStyles.title}>设置</ThemedText>
             {/* 路由自检：设置页能打开就说明 expo-router 正常。
                 顺便把当前 pathname 显示出来，方便一眼确认。 */}
@@ -459,6 +507,21 @@ const createResponsiveStyles = (deviceType: string, spacing: number, insets: any
   const minTouchTarget = DeviceUtils.getMinTouchTargetSize();
 
   return StyleSheet.create({
+    backButton: {
+      alignSelf: "flex-start",
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      marginBottom: 8,
+      borderRadius: 8,
+      borderWidth: 2.5,
+      borderColor: Colors.dark.primary,
+      backgroundColor: "#FA8C1618",
+    },
+    backButtonText: {
+      color: Colors.dark.primary,
+      fontSize: 18,
+      fontWeight: "bold",
+    },
     container: {
       flex: 1,
       padding: spacing,

@@ -16,17 +16,26 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 );
 
 // expo-router：设置页用到 useRouter
+const mockRouter = {
+  push: jest.fn(),
+  back: jest.fn(),
+  replace: jest.fn(),
+  setParams: jest.fn(),
+  navigate: jest.fn(),
+  canGoBack: jest.fn(() => true),
+};
+
 jest.mock("expo-router", () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    back: jest.fn(),
-    replace: jest.fn(),
-    setParams: jest.fn(),
-  }),
+  useRouter: () => mockRouter,
   usePathname: () => "/settings",
   useSegments: () => [],
   useLocalSearchParams: () => ({}),
   Link: ({ children }: any) => children,
+  // useFocusEffect：expo-router v3 从 react-navigation 转发而来
+  useFocusEffect: (cb: any) => {
+    const React = require("react");
+    React.useEffect(() => cb(), [cb]);
+  },
 }));
 
 // Toast
@@ -105,14 +114,14 @@ jest.mock("react-native/Libraries/Utilities/Dimensions", () => {
   };
 });
 
+// ★ RN 的 TVEventHandler 是 CommonJS 直接导出对象（module.exports = {...}），
+//   不是 ESM default —— mock 形态必须一致，否则 `addListener is not a function`。
 jest.mock("react-native/Libraries/Components/TV/TVEventHandler", () => ({
-  __esModule: true,
-  default: {
-    addListener: () => {
-      tvSubscribeCount += 1;
-      return { remove: () => {} };
-    },
+  addListener: () => {
+    tvSubscribeCount += 1;
+    return { remove: () => {} };
   },
+  removeAllListeners: () => {},
 }));
 
 jest.mock("expo-constants", () => ({
@@ -126,6 +135,13 @@ import TestRenderer, { act } from "react-test-renderer";
 import SettingsScreen from "../app/settings";
 
 describe("设置页渲染（不卡死）", () => {
+  beforeEach(() => {
+    mockRouter.push.mockClear();
+    mockRouter.back.mockClear();
+    mockRouter.replace.mockClear();
+    mockRouter.canGoBack.mockReturnValue(true);
+  });
+
   it("渲染设置页不应陷入无限重渲染", async () => {
     // 统计 SettingsScreen 自身的渲染次数
     let renderCount = 0;
@@ -167,4 +183,27 @@ describe("设置页渲染（不卡死）", () => {
     });
     jest.useRealTimers();
   }, 30000);
+
+  // ─────────────────────────────────────────────────────────────
+  // 下面两个是 VIDAA TV 真机上发现的两个问题：
+  //   ① 设置页按返回键回不去首页
+  //   ② 设置页里看不到任何橙色焦点框
+  // ─────────────────────────────────────────────────────────────
+
+  it("页面上存在可聚焦控件（TV 焦点必须有落点）", async () => {
+    let tree: any = null;
+    await act(async () => {
+      tree = TestRenderer.create(React.createElement(SettingsScreen));
+    });
+    // 找到带 focusable 的控件 —— 没有可聚焦控件，原生焦点系统就没有落点，
+    // 方向键会「哪都不去」，表现就是看不到任何焦点框。
+    const focusables = tree.root.findAll(
+      (n: any) => n.props && n.props.focusable === true,
+      { deep: true }
+    );
+    expect(focusables.length).toBeGreaterThan(0);
+    await act(async () => {
+      tree.unmount();
+    });
+  });
 });
