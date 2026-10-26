@@ -16,8 +16,6 @@ import { getCommonResponsiveStyles } from "@/utils/ResponsiveStyles";
 import ResponsiveNavigation from "@/components/navigation/ResponsiveNavigation";
 import { useApiConfig, getApiConfigErrorMessage } from "@/hooks/useApiConfig";
 import { Colors } from "@/constants/Colors";
-import { useSettingsUiStore, settingsOverlayOpacity } from "@/stores/settingsUiStore";
-import SettingsScreen from "@/app/settings";
 
 const LOAD_MORE_THRESHOLD = 200;
 
@@ -25,10 +23,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = "dark";
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  // ★ 设置页覆盖层状态（纯 JS，完全不碰导航栈 —— 这台电视上导航回退会静默失效）
-  const settingsOpen = useSettingsUiStore((st) => st.open);
-  const showSettings = useCallback(() => useSettingsUiStore.getState().show(), []);
-  const hideSettings = useCallback(() => useSettingsUiStore.getState().hide(), []);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
 
@@ -76,18 +70,6 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
     const handleBackPress = () => {
-      // ★ 设置页覆盖层开着时，返回键用来**关掉它**（而不是双击退出）。
-      //
-      //   Android 的 BackHandler 是**后注册者优先**：根布局先挂载 → 先注册；
-      //   首页这个 useFocusEffect 后注册 → 优先级最高。
-      //   所以在这里处理最可靠。
-      //
-      //   纯 JS 状态切换，完全不碰导航栈（这台电视上导航回退会静默失效）。
-      if (useSettingsUiStore.getState().open) {
-        useSettingsUiStore.getState().hide();
-        return true;
-      }
-
       const now = Date.now();
 
       // 如果还没按过返回键，或距离上次超过2秒
@@ -258,16 +240,11 @@ export default function HomeScreen() {
               Link 走的是导航的原生路径，兼容性比命令式 push 好。
               （注意：<Link asChild> 会用 cloneElement 注入自己的 onPress，
                 所以 child 上不能再挂 onPress，否则会被覆盖掉。） */}
-          {/* ★ 设置页做成**首页覆盖层**（不是独立路由）——
-              这台电视上任何「回到栈里已有路由」的导航动作都静默失效，
-              独立路由只能进不能退。覆盖层打开/关闭全走纯 JS 状态。 */}
-          <StyledButton
-            style={dynamicStyles.iconButton}
-            variant="ghost"
-            onPress={() => showSettings()}
-          >
-            <Settings color={colorScheme === "dark" ? "white" : "black"} size={24} />
-          </StyledButton>
+          <Link href="/settings" asChild>
+            <StyledButton style={dynamicStyles.iconButton} variant="ghost">
+              <Settings color={colorScheme === "dark" ? "white" : "black"} size={24} />
+            </StyledButton>
+          </Link>
           {isLoggedIn && (
             <StyledButton style={dynamicStyles.iconButton} onPress={logout} variant="ghost">
               <LogOut color={colorScheme === "dark" ? "white" : "black"} size={24} />
@@ -427,14 +404,18 @@ export default function HomeScreen() {
       ) : false ? (
         /* ★ 这里原本是 `apiConfigStatus.isValidating` 分支（显示「正在验证服务器配置...」）。
          *
-         *   实测在这台电视（VIDAA / Android 6）上，首页会**一直**停在这个转圈上，
-         *   整个 App 看起来就是「卡死」—— 而根因是验证链路上**任何一环**的 await
-         *   收不到终态（AsyncStorage / fetch / 服务端配置拉取），
-         *   给每一环加超时都不够。
+         *   ★★ 真机实测：这台电视（VIDAA / Android 6）上，这个分支会**永远**停住 ——
+         *   验证链路（AsyncStorage / fetch / 服务端配置拉取）里任何一环的 await
+         *   收不到终态，整个 App 看起来就是「卡死」，什么都点不了。
          *
-         *   ⇒ 用户体验上，**宁可显示内容（可能为空/有错误提示），也不要卡在转圈**。
-         *     真正需要改服务器地址时，走右上角齿轮进设置页即可。
-         *   （验证逻辑仍在后台跑，通了就会正常刷新内容。）
+         *   ⇒ 用户体验上，**宁可显示内容（可能为空/带提示），也不要卡在转圈上**。
+         *     真要改服务器地址，走右上角齿轮进设置页即可。
+         *   （验证逻辑仍在后台跑，通了就正常刷新内容。）
+         *
+         *   相关防护见：
+         *     services/storage.ts  → getItemWithTimeout（AsyncStorage 读超时）
+         *     services/api.ts     → getSiteBasic 的 Promise.race 超时
+         *     __tests__/apiConfigNeverHangs.test.tsx（防卡死回归测试）
          */
         <View style={commonStyles.center}>
           <ActivityIndicator size="large" />
@@ -476,27 +457,9 @@ export default function HomeScreen() {
     </ThemedView>
   );
 
-  // ★ 设置页覆盖层：始终渲染，显隐由模块级 Animated.Value 控制。
-  //   ★ 必须放在 deviceType 判断**之前** —— TV 走的是
-  //     `if (deviceType === "tv") return content;` 这条分支，
-  //     覆盖层写在分支之后就永远渲染不到。
-  const settingsOverlay = (
-    <Animated.View
-      pointerEvents={settingsOpen ? "auto" : "none"}
-      style={[StyleSheet.absoluteFill, { opacity: settingsOverlayOpacity }]}
-    >
-      <SettingsScreen onClose={hideSettings} />
-    </Animated.View>
-  );
-
   // 根据设备类型决定是否包装在响应式导航中
   if (deviceType === "tv") {
-    return (
-      <View style={{ flex: 1 }}>
-        {content}
-        {settingsOverlay}
-      </View>
-    );
+    return content;
   }
 
   return <ResponsiveNavigation>{content}</ResponsiveNavigation>;
