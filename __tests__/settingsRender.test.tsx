@@ -95,6 +95,20 @@ jest.mock("react-native-safe-area-context", () => {
 });
 
 // RN TV 的 TV 事件订阅：jest 下没有原生实现
+// TVFocusGuideView：jest 下没有原生实现（setDestinations 命令不存在）。
+//
+// ★ 它在 RN 里是 **CommonJS 直接导出**（module.exports = ForwardedTVFocusGuideView），
+//   RN 的 index.js 用 require() 拿 —— 所以 mock 也必须直接导出组件本身，
+//   写成 { __esModule: true, default: C } 会让 RN 拿到一个对象而不是组件，
+//   渲染时整个套件直接挂掉。
+// ★ 用 Fragment 替身，避免在 mock 工厂里 require("react-native") 造成循环依赖。
+jest.mock("react-native/Libraries/Components/TV/TVFocusGuideView", () => {
+  const React = require("react");
+  return function TVFocusGuideViewStub({ children }: any) {
+    return React.createElement(React.Fragment, null, children);
+  };
+});
+
 // 统计原生 TV 事件订阅次数 —— 这是「卡死」的直接指标。
 //
 // RN TV 的 useTVEventHandler 依赖 `[handleEvent]`：

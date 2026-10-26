@@ -280,7 +280,24 @@ export class API {
 
   /** 站点基础配置（免登录），并同步私有化开关 */
   async getSiteBasic(): Promise<SiteBasic> {
-    const data = await panghuFetch(this.baseURL, "/api/config/basic");
+    // ★ 加超时：电视上这个请求可能挂住不返回（实测首页会一直停在
+    //   「正在验证服务器配置...」，整个 App 卡住不可用）。
+    //   fetch 没有默认超时，必须自己用 AbortController 兜底。
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    let data;
+    try {
+      data = await panghuFetch(this.baseURL, "/api/config/basic", {
+        signal: controller.signal,
+      });
+    } catch (e: any) {
+      if (e?.name === "AbortError" || /abort/i.test(String(e?.message))) {
+        throw new Error("连接超时，请检查服务器地址");
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
     const siteBasic: SiteBasic = {
       siteName: data?.siteName ?? "",
       privateAccess: !!data?.privateAccess,

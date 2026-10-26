@@ -37,6 +37,8 @@ export const StyledButton = forwardRef<View, StyledButtonProps>(
         },
         focusedButton: {
           borderColor: colors.focus,
+          // 电视上焦点框必须够粗才看得见（1px 基本不可见）
+          borderWidth: 2.5,
         },
         selectedText: {
           color: Colors.dark.text,
@@ -121,8 +123,17 @@ export const StyledButton = forwardRef<View, StyledButtonProps>(
           // 表现为「焦点框卡在某个 chip 上，↑↓→ 全部没反应」，
           // 连带右上角的设置齿轮也点不到。
           ref={ref}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          // ★ 外部传的 onFocus/onBlur 要**合并**进来，不能被覆盖 ——
+          //   否则调用方（比如首页齿轮）无法知道「焦点现在在不在我身上」，
+          //   也就无法在页面级 TV 事件里判断「按 OK 是不是要点我」。
+          onFocus={(e) => {
+            setIsFocused(true);
+            (rest as any).onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            (rest as any).onBlur?.(e);
+  }}
           style={({ focused }) => [
             styles.button,
             variantStyles[variant].button,

@@ -16,10 +16,15 @@
  * 抽成纯函数是为了能脱离 React 单独测。
  */
 
+import { Platform } from "react-native";
+
 export interface BackCapableRouter {
   back?: () => void;
   replace?: (href: string) => void;
+  navigate?: (href: string) => void;
   canGoBack?: () => boolean;
+  /** expo-router v3：清空整个栈回到根路由（TV 上最可靠）。 */
+  dismissAll?: () => void;
 }
 
 /**
@@ -27,9 +32,25 @@ export interface BackCapableRouter {
  *
  * @returns 实际执行的动作：`"back"` | `"replace"` | `"none"`
  */
-export function goBackSafely(router: BackCapableRouter | undefined | null): "back" | "replace" | "none" {
+export function goBackSafely(
+  router: BackCapableRouter | undefined | null
+): "back" | "replace" | "dismissAll" | "none" {
   if (!router) return "none";
   try {
+    // ★ Android TV 上 `router.back()` / `router.replace("/")` 都可能**没反应** ——
+    // canGoBack() 说是 true，实际 back() 什么也不做，页面纹丝不动。
+    // 实测在 VIDAA 上 replace("/") 同样静默失效。
+    //
+    // expo-router v3 的 `dismissAll()` 才是 TV 上最可靠的：
+    // 直接清空整个导航栈回到根路由，不依赖栈状态。
+    if (Platform.isTV) {
+      if (typeof router.dismissAll === "function") {
+        router.dismissAll();
+        return "dismissAll";
+      }
+      router.replace?.("/");
+      return "replace";
+    }
     if (typeof router.canGoBack === "function" && router.canGoBack()) {
       router.back?.();
       return "back";

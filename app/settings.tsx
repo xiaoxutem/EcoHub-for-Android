@@ -384,6 +384,16 @@ export default function SettingsScreen() {
   // 自己在页面级注册 BackHandler（后注册者优先）：
   // 能回退就 back，不能回退就 replace 回首页 —— 保证一定能离开设置页。
   const goBack = React.useCallback(() => {
+    // ★ 回首页只能用「push 一个不在栈里的路由」——
+    //   这台电视上 back() / replace("/") / navigate("/") / dismissAll() 全都静默失效
+    //   （实测：都不报错也不跳转）。
+    //   /home-from-settings 是一个**新路由**（不在栈里）→ push 一定有效，
+    //   它内部直接渲染首页组件，视觉上就是回到了首页。
+    try {
+      router.push("/home-from-settings");
+      return;
+    } catch {}
+    // 兜底：万一 push 失败（路由不存在等），退回到通用逻辑
     goBackSafely(router);
   }, [router]);
 
@@ -419,8 +429,20 @@ export default function SettingsScreen() {
             {/* ★ 可见的返回按钮 ——
                 TV 上「按返回键」用户不一定知道，一个能点的返回更直观；
                 它同时也是焦点系统里的第一个可聚焦控件，进入页面时焦点会落在它身上。 */}
+            {/* ★ style 必须写成**函数**形式！
+                RN TV 的 Pressable 里：
+                  const shouldUpdatePressed =
+                    typeof children === 'function' || typeof style === 'function';
+                只有 shouldUpdatePressed 为 true 时，内部 `focused` state 才会被
+                焦点事件更新。而 onPress 的触发条件是 `focused && eventType === 'select'`。
+                style 传对象 → shouldUpdatePressed=false → focused 永远是 false
+                → **按 OK 永远不触发 onPress**（按钮看得见、点不动）。
+                用函数式 style 后焦点框和 onPress 都正常。 */}
             <Pressable
-              style={dynamicStyles.backButton}
+              style={({ focused }) => [
+                dynamicStyles.backButton,
+                focused && dynamicStyles.backButtonFocused,
+              ]}
               focusable
               onPress={goBack}
             >
@@ -507,6 +529,10 @@ const createResponsiveStyles = (deviceType: string, spacing: number, insets: any
   const minTouchTarget = DeviceUtils.getMinTouchTargetSize();
 
   return StyleSheet.create({
+    backButtonFocused: {
+      borderColor: Colors.dark.primary,
+      backgroundColor: "#FA8C1618",
+    },
     backButton: {
       alignSelf: "flex-start",
       paddingVertical: 6,
