@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet, Alert, Platform, ScrollView, useTVEventHandler, Pressable, BackHandler } from "react-native";
+import { View, StyleSheet, Alert, Platform, ScrollView, useTVEventHandler, Pressable, BackHandler, ToastAndroid } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
 import { Colors } from "@/constants/Colors";
@@ -10,6 +10,7 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 import { useSettingsStore } from "@/stores/settingsStore";
 import useAuthStore from "@/stores/authStore";
 import { useRemoteControlStore } from "@/stores/remoteControlStore";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 import { APIConfigSection } from "@/components/settings/APIConfigSection";
 import { AccountSection } from "@/components/settings/AccountSection";
 import { LiveStreamSection } from "@/components/settings/LiveStreamSection";
@@ -383,19 +384,44 @@ export default function SettingsScreen() {
   //
   // 自己在页面级注册 BackHandler（后注册者优先）：
   // 能回退就 back，不能回退就 replace 回首页 —— 保证一定能离开设置页。
+  // navigation 在设置页（独立路由）里是有 NavigationContainer 上下文的 ✓
+  const navigation = useNavigation();
+
   const goBack = React.useCallback(() => {
-    // ★ 回首页只能用「push 一个不在栈里的路由」——
-    //   这台电视上 back() / replace("/") / navigate("/") / dismissAll() 全都静默失效
-    //   （实测：都不报错也不跳转）。
-    //   /home-from-settings 是一个**新路由**（不在栈里）→ push 一定有效，
-    //   它内部直接渲染首页组件，视觉上就是回到了首页。
-    try {
-      router.push("/home-from-settings");
-      return;
-    } catch {}
-    // 兜底：万一 push 失败（路由不存在等），退回到通用逻辑
+    // ★ 回首页：依次尝试几种方式（这台电视上大部分导航动作都静默失效，
+    //   所以每种都试一遍，并用 Toast 报告到底走到哪一步）。
+    //
+    //   实测失效的：back() / replace("/") / dismissAll() / navigate("/") /
+    //                <Link href="/"> / push("/")
+    //   实测有效的：push 一个**不在栈里**的路由
+    const attempts: Array<[string, () => void]> = [
+      ["popToTop", () => (navigation as any)?.popToTop?.()],
+      [
+        "reset",
+        () =>
+          (navigation as any)?.dispatch?.(
+            CommonActions.reset({ index: 0, routes: [{ name: "index" }] })
+          ),
+      ],
+      // 带一个变化的 query 参数 → react-navigation 认为是**新路由** → 走 push
+      ["push带参", () => router.push({ pathname: "/", params: { t: String(Date.now()) } })],
+      ["push中转页", () => router.push("/home-from-settings")],
+    ];
+    for (const [name, fn] of attempts) {
+      try {
+        fn();
+        try {
+          ToastAndroid.show(`返回:${name}`, ToastAndroid.SHORT);
+        } catch {}
+        return;
+      } catch (e: any) {
+        try {
+          ToastAndroid.show(`失败:${name}`, ToastAndroid.SHORT);
+        } catch {}
+      }
+    }
     goBackSafely(router);
-  }, [router]);
+  }, [router, navigation]);
 
   useFocusEffect(
     React.useCallback(() => {
