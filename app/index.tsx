@@ -16,6 +16,8 @@ import { getCommonResponsiveStyles } from "@/utils/ResponsiveStyles";
 import ResponsiveNavigation from "@/components/navigation/ResponsiveNavigation";
 import { useApiConfig, getApiConfigErrorMessage } from "@/hooks/useApiConfig";
 import { Colors } from "@/constants/Colors";
+import { useSettingsUiStore, settingsOverlayOpacity } from "@/stores/settingsUiStore";
+import SettingsScreen from "@/app/settings";
 
 const LOAD_MORE_THRESHOLD = 200;
 
@@ -23,6 +25,10 @@ export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = "dark";
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  // ★ 设置页覆盖层状态（纯 JS，完全不碰导航栈 —— 这台电视上导航回退会静默失效）
+  const settingsOpen = useSettingsUiStore((st) => st.open);
+  const showSettings = useCallback(() => useSettingsUiStore.getState().show(), []);
+  const hideSettings = useCallback(() => useSettingsUiStore.getState().hide(), []);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
 
@@ -70,6 +76,18 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
     const handleBackPress = () => {
+      // ★ 设置页覆盖层开着时，返回键用来**关掉它**（而不是双击退出）。
+      //
+      //   Android 的 BackHandler 是**后注册者优先**：根布局先挂载 → 先注册；
+      //   首页这个 useFocusEffect 后注册 → 优先级最高。
+      //   所以在这里处理最可靠。
+      //
+      //   纯 JS 状态切换，完全不碰导航栈（这台电视上导航回退会静默失效）。
+      if (useSettingsUiStore.getState().open) {
+        useSettingsUiStore.getState().hide();
+        return true;
+      }
+
       const now = Date.now();
 
       // 如果还没按过返回键，或距离上次超过2秒
@@ -240,11 +258,16 @@ export default function HomeScreen() {
               Link 走的是导航的原生路径，兼容性比命令式 push 好。
               （注意：<Link asChild> 会用 cloneElement 注入自己的 onPress，
                 所以 child 上不能再挂 onPress，否则会被覆盖掉。） */}
-          <Link href="/settings" asChild>
-            <StyledButton style={dynamicStyles.iconButton} variant="ghost">
-              <Settings color={colorScheme === "dark" ? "white" : "black"} size={24} />
-            </StyledButton>
-          </Link>
+          {/* ★ 设置页做成**首页覆盖层**（不是独立路由）——
+              这台电视上任何「回到栈里已有路由」的导航动作都静默失效，
+              独立路由只能进不能退。覆盖层打开/关闭全走纯 JS 状态。 */}
+          <StyledButton
+            style={dynamicStyles.iconButton}
+            variant="ghost"
+            onPress={() => showSettings()}
+          >
+            <Settings color={colorScheme === "dark" ? "white" : "black"} size={24} />
+          </StyledButton>
           {isLoggedIn && (
             <StyledButton style={dynamicStyles.iconButton} onPress={logout} variant="ghost">
               <LogOut color={colorScheme === "dark" ? "white" : "black"} size={24} />
@@ -442,9 +465,27 @@ export default function HomeScreen() {
     </ThemedView>
   );
 
+  // ★ 设置页覆盖层：始终渲染，显隐由模块级 Animated.Value 控制。
+  //   ★ 必须放在 deviceType 判断**之前** —— TV 走的是
+  //     `if (deviceType === "tv") return content;` 这条分支，
+  //     覆盖层写在分支之后就永远渲染不到。
+  const settingsOverlay = (
+    <Animated.View
+      pointerEvents={settingsOpen ? "auto" : "none"}
+      style={[StyleSheet.absoluteFill, { opacity: settingsOverlayOpacity }]}
+    >
+      <SettingsScreen onClose={hideSettings} />
+    </Animated.View>
+  );
+
   // 根据设备类型决定是否包装在响应式导航中
   if (deviceType === "tv") {
-    return content;
+    return (
+      <View style={{ flex: 1 }}>
+        {content}
+        {settingsOverlay}
+      </View>
+    );
   }
 
   return <ResponsiveNavigation>{content}</ResponsiveNavigation>;

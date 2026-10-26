@@ -40,7 +40,12 @@ function isSectionItem(
   return !!item;
 }
 
-export default function SettingsScreen() {
+export default function SettingsScreen({
+  onClose,
+}: {
+  /** 由首页覆盖层传入：关闭覆盖层（纯 JS，不碰导航栈）。 */
+  onClose?: () => void;
+} = {}) {
   const router = useRouter();
   const { loadSettings, saveSettings, saveAccountAndLogin, setApiBaseUrl, setM3uUrl } = useSettingsStore();
   const { lastMessage, targetPage, clearMessage } = useRemoteControlStore();
@@ -385,15 +390,22 @@ export default function SettingsScreen() {
   // 自己在页面级注册 BackHandler（后注册者优先）：
   // 能回退就 back，不能回退就 replace 回首页 —— 保证一定能离开设置页。
   // navigation 在设置页（独立路由）里是有 NavigationContainer 上下文的 ✓
-  const navigation = useNavigation();
+  // ★ 用 try/catch 包住：设置页也会被当作**覆盖层**在首页里渲染，
+  //   覆盖层模式下没有 NavigationContainer 上下文 → useNavigation() 会抛错。
+  let navigation: any = null;
+  try {
+    navigation = useNavigation();
+  } catch {
+    navigation = null;
+  }
 
   const goBack = React.useCallback(() => {
-    // ★ 回首页：依次尝试几种方式（这台电视上大部分导航动作都静默失效，
-    //   所以每种都试一遍，并用 Toast 报告到底走到哪一步）。
-    //
-    //   实测失效的：back() / replace("/") / dismissAll() / navigate("/") /
-    //                <Link href="/"> / push("/")
-    //   实测有效的：push 一个**不在栈里**的路由
+    // ★ 覆盖层模式（首页内嵌）：onClose 直接关掉覆盖层 —— 100% 可靠。
+    if (onClose) {
+      onClose();
+      return;
+    }
+    // 独立路由模式：依次尝试几种方式（这台电视上大部分导航动作都静默失效）。
     const attempts: Array<[string, () => void]> = [
       ["popToTop", () => (navigation as any)?.popToTop?.()],
       [
@@ -421,7 +433,7 @@ export default function SettingsScreen() {
       }
     }
     goBackSafely(router);
-  }, [router, navigation]);
+  }, [router, navigation, onClose]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -464,12 +476,24 @@ export default function SettingsScreen() {
                 style 传对象 → shouldUpdatePressed=false → focused 永远是 false
                 → **按 OK 永远不触发 onPress**（按钮看得见、点不动）。
                 用函数式 style 后焦点框和 onPress 都正常。 */}
+            {/* ★ style 必须是**函数**形式：
+                   RN TV 的 Pressable 里
+                     const shouldUpdatePressed =
+                       typeof children === 'function' || typeof style === 'function';
+                   只有 shouldUpdatePressed 为 true 时内部 `focused` 才会随焦点事件更新，
+                   而 onPress 的触发条件是 `focused && eventType === 'select'`。
+                   style 传对象 → 按 OK 永远不触发 onPress（焦点框会亮但点不动）。
+
+                 ★ hasTVPreferredFocus：原生 requestFocus()，让焦点一进页面就落在返回按钮上。
+                   这很关键 —— 焦点在 **ScrollView 外面**时 BACK 键才能到达 JS；
+                   焦点在 ScrollView 里面时会被电视固件吞掉（JS 完全收不到）。 */}
             <Pressable
               style={({ focused }) => [
                 dynamicStyles.backButton,
                 focused && dynamicStyles.backButtonFocused,
               ]}
               focusable
+              hasTVPreferredFocus
               onPress={goBack}
             >
               <ThemedText style={dynamicStyles.backButtonText}>‹ 返回</ThemedText>
