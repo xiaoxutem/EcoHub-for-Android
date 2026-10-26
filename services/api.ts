@@ -71,7 +71,7 @@ export async function panghuFetch(
     throw new Error("UNAUTHORIZED");
   }
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    throw httpError(response.status);
   }
 
   // 服务端 id 为 int64（MissAV 为 19 位），超出 JS 安全整数范围会丢精度
@@ -187,6 +187,19 @@ export interface SessionStatus {
   requireWebLogin: boolean;
 }
 
+/**
+ * 带 HTTP 状态码的错误。
+ *
+ * 之前只把状态码写进 message（`HTTP error! status: 404`），
+ * 调用方没法用 `e.status` 判断 —— 只能靠正则去抠字符串，很脆。
+ * 这里额外挂一个 `status` 字段，调用方就能直接判断。
+ */
+export function httpError(status: number): Error {
+  const err = new Error(`HTTP error! status: ${status}`) as Error & { status?: number };
+  err.status = status;
+  return err;
+}
+
 export class API {
   public baseURL: string = "";
 
@@ -226,7 +239,7 @@ export class API {
             throw new Error("UNAUTHORIZED");
           }
           if (!retryResponse.ok) {
-            throw new Error(`HTTP error! status: ${retryResponse.status}`);
+            throw httpError(retryResponse.status);
           }
           return retryResponse;
         }
@@ -235,7 +248,7 @@ export class API {
     }
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw httpError(response.status);
     }
 
     return response;
@@ -294,7 +307,12 @@ export class API {
       // 404 不等于「需要登录」—— 它只说明「这个源没有门禁探测接口」。
       // 若把它当成需要登录，游客明明能正常浏览（/api/index 等接口都返回 200），
       // 打开 App 却先弹登录框 —— 在没有系统 IME 的电视上根本没法登录。
-      if (e?.status === 404 || e?.response?.status === 404) {
+      const status =
+        e?.status ??
+        e?.response?.status ??
+        // 兜底：错误 message 形如 "HTTP error! status: 404"
+        (typeof e?.message === "string" ? /status:\s*(\d+)/.exec(e.message)?.[1] : undefined);
+      if (Number(status) === 404) {
         // 该源没有门禁探测接口 → 视为「不要求登录」，游客可正常浏览。
         return {
           authenticated: false,

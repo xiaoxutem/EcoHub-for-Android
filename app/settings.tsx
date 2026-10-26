@@ -23,7 +23,7 @@ import { DeviceUtils } from "@/utils/DeviceUtils";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SettingsFocusContext } from "@/hooks/useSettingsFocus";
 import { useSettingsFocusRegistry } from "@/hooks/useSettingsFocusRegistry";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 
 type SectionItem = {
   component: React.ReactElement;
@@ -379,6 +379,11 @@ export default function SettingsScreen() {
         {deviceType === "tv" && (
           <View style={dynamicStyles.header}>
             <ThemedText style={dynamicStyles.title}>设置</ThemedText>
+            {/* 路由自检：设置页能打开就说明 expo-router 正常。
+                顺便把当前 pathname 显示出来，方便一眼确认。 */}
+            <ThemedText style={{ color: "#888", fontSize: 12, marginTop: 4 }}>
+              {`route: ${usePathname()}`}
+            </ThemedText>
           </View>
         )}
 

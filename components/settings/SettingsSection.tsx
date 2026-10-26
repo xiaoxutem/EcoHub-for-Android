@@ -72,8 +72,10 @@ const styles = StyleSheet.create({
     borderColor: "#333",
   },
   sectionFocused: {
+    // 电视上 1px 边框几乎看不见 —— 焦点必须一眼可辨。
     borderColor: Colors.dark.primary,
-    backgroundColor: "#007AFF10",
+    borderWidth: 2.5,
+    backgroundColor: "#FA8C1618",
   },
   sectionInner: {
     width: "100%",

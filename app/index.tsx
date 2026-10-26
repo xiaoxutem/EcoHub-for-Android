@@ -5,7 +5,7 @@ import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
 import { api } from "@/services/api";
 import VideoCard from "@/components/VideoCard";
-import { useFocusEffect, useRouter } from "expo-router";
+import { Link, useFocusEffect, useRouter } from "expo-router";
 import { Search, Settings, LogOut, Heart } from "lucide-react-native";
 import { StyledButton } from "@/components/StyledButton";
 import useHomeStore, { RowItem, Category } from "@/stores/homeStore";
@@ -236,9 +236,15 @@ export default function HomeScreen() {
           >
             <Search color={colorScheme === "dark" ? "white" : "black"} size={24} />
           </StyledButton>
-          <StyledButton style={dynamicStyles.iconButton} onPress={() => router.push("/settings")} variant="ghost">
-            <Settings color={colorScheme === "dark" ? "white" : "black"} size={24} />
-          </StyledButton>
+          {/* 用 expo-router 的 <Link> 而不是 router.push ——
+              Link 走的是导航的原生路径，兼容性比命令式 push 好。
+              （注意：<Link asChild> 会用 cloneElement 注入自己的 onPress，
+                所以 child 上不能再挂 onPress，否则会被覆盖掉。） */}
+          <Link href="/settings" asChild>
+            <StyledButton style={dynamicStyles.iconButton} variant="ghost">
+              <Settings color={colorScheme === "dark" ? "white" : "black"} size={24} />
+            </StyledButton>
+          </Link>
           {isLoggedIn && (
             <StyledButton style={dynamicStyles.iconButton} onPress={logout} variant="ghost">
               <LogOut color={colorScheme === "dark" ? "white" : "black"} size={24} />

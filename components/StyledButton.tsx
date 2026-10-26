@@ -113,14 +113,13 @@ export const StyledButton = forwardRef<View, StyledButtonProps>(
       <Animated.View style={[animationStyle, style]}>
         <Pressable
           android_ripple={Platform.isTV || deviceType !== 'tv'? { color: 'transparent' } : { color: Colors.dark.link }}
-          // ★ 电视上必须显式 focusable
+          // ★ 电视上必须显式 focusable（放在 {...rest} 之后，见下方注释）
           //
           // React Native TV 的 `Pressable` 默认 `focusable={false}` ——
           // 不改的话它**不会成为原生焦点目标**，焦点会落在外层容器（FlatList / ScrollView）上，
           // 方向键被容器消费去滚动，焦点永远出不去：
           // 表现为「焦点框卡在某个 chip 上，↑↓→ 全部没反应」，
           // 连带右上角的设置齿轮也点不到。
-          focusable={isTv ? true : (rest.focusable ?? false)}
           ref={ref}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -131,6 +130,10 @@ export const StyledButton = forwardRef<View, StyledButtonProps>(
             focused && (variantStyles[variant].focusedButton ?? styles.focusedButton),
           ]}
           {...rest}
+          // ★ 必须放在 {...rest} **之后** ——
+          // 否则 rest 里没有 focusable 键时（值为 undefined）会把上面的
+          // `focusable={true}` 覆盖成 undefined，控件就又不是焦点目标了。
+          focusable={isTv ? true : (rest.focusable ?? false)}
         >
           {text ? (
             <ThemedText
