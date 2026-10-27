@@ -12,7 +12,6 @@ import useAuthStore from "@/stores/authStore";
 import { useRemoteControlStore } from "@/stores/remoteControlStore";
 import { APIConfigSection } from "@/components/settings/APIConfigSection";
 import { AccountSection } from "@/components/settings/AccountSection";
-import { LiveStreamSection } from "@/components/settings/LiveStreamSection";
 import { RemoteInputSection } from "@/components/settings/RemoteInputSection";
 import { UpdateSection } from "@/components/settings/UpdateSection";
 // import { VideoSourceSection } from "@/components/settings/VideoSourceSection";
@@ -61,7 +60,6 @@ export default function SettingsScreen() {
   const [currentSection, setCurrentSection] = useState<string | null>(null);
 
   const apiSectionRef = useRef<any>(null);
-  const liveStreamSectionRef = useRef<any>(null);
   const saveButtonRef = useRef<any>(null);
   /** 远程输入开关的切换函数（由 RemoteInputSection 注册，供页面级 select 分发调用） */
   const remoteInputToggleRef = useRef<(() => void) | null>(null);
@@ -91,9 +89,6 @@ export default function SettingsScreen() {
       accountSectionRef.current.setUsernameValue(message);
     } else if (currentSection === "password" && accountSectionRef.current) {
       accountSectionRef.current.setPasswordValue(message);
-    } else if (currentSection === "livestream" && liveStreamSectionRef.current) {
-      // Live Stream Section
-      setM3uUrl(message);
     }
   };
 
@@ -169,20 +164,6 @@ export default function SettingsScreen() {
   //     ),
   //     key: "api",
   //   },
-  //   // 直播源配置 - 仅在非手机端显示
-  //   deviceType !== "mobile" && {
-  //     component: (
-  //       <LiveStreamSection
-  //         ref={liveStreamSectionRef}
-  //         onChanged={markAsChanged}
-  //         onFocus={() => {
-  //           setCurrentFocusIndex(2);
-  //           setCurrentSection("livestream");
-  //         }}
-  //       />
-  //     ),
-  //     key: "livestream",
-  //   },
   //   // {
   //   //   component: (
   //   //     <VideoSourceSection
@@ -248,18 +229,6 @@ export default function SettingsScreen() {
       ),
       key: "account",
     },
-    deviceType !== "mobile" && {
-      component: (
-        <LiveStreamSection
-          ref={liveStreamSectionRef}
-          onChanged={markAsChanged}
-          onFocus={() => {
-            setCurrentSection("livestream");
-          }}
-        />
-      ),
-      key: "livestream",
-    },
     Platform.OS === "android" && {
       component: <UpdateSection />,
       key: "update",
@@ -279,7 +248,6 @@ export default function SettingsScreen() {
     keys.push("settings.api");
     keys.push("settings.account.username");
     keys.push("settings.account.password");
-    if (deviceType !== "mobile") keys.push("settings.liveStream");
     keys.push("settings.save");
     return keys;
   }, [deviceType]);
@@ -300,7 +268,7 @@ export default function SettingsScreen() {
     (delta: number) => {
       const step = delta > 0 ? 1 : -1;
       let next = focusIndexRef.current;
-      // 跳过未注册的节点（mobile 下没有 remoteInput/liveStream，或 UpdateSection 未渲染）
+      // 跳过未注册的节点（mobile 下没有 remoteInput，或 UpdateSection 未渲染）
       for (let guard = 0; guard < focusOrder.length; guard++) {
         const candidate = next + step;
         if (candidate < 0 || candidate > focusOrder.length - 1) break;

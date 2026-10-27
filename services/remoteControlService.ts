@@ -55,8 +55,6 @@ const getRemotePageHTML = (current: RemoteConfigPayload) => {
       <input id="username" placeholder="用户名" />
       <label>密码</label>
       <input id="password" type="password" placeholder="密码" />
-      <label>直播源 m3u 地址（可选）</label>
-      <input id="m3uUrl" placeholder="http://.../live.m3u" />
       <button id="saveBtn" onclick="save()">保存到电视</button>
       <div id="result"></div>
       <div class="search-box">

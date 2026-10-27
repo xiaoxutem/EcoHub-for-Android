@@ -127,7 +127,7 @@ export const RemoteInputSection: React.FC<RemoteInputSectionProps> = ({
             <View style={styles.qrInfo}>
               <ThemedText style={styles.qrTitle}>扫码远程配置</ThemedText>
               <ThemedText style={styles.qrTip}>
-                手机扫码打开配置页，可填写服务器地址、用户名、密码、直播源，保存后电视立即生效
+                手机扫码打开配置页，可填写服务器地址、用户名、密码，保存后电视立即生效
               </ThemedText>
               {serverUrl && (
                 <>
